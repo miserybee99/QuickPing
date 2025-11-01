@@ -14,7 +14,9 @@ import { formatDistanceToNow } from 'date-fns';
 import vi from 'date-fns/locale/vi';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/useUser';
+import { useSocket } from '@/contexts/SocketContext';
 import { SearchUsersDialog } from './search-users-dialog';
+import { Message } from '@/types';
 
 interface MessagesPanelProps {
   selectedId: string | null;
@@ -24,6 +26,7 @@ interface MessagesPanelProps {
 export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
   const router = useRouter();
   const { user, isClient } = useUser();
+  const { socket } = useSocket();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +38,44 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
       fetchConversations();
     }
   }, [isClient, user]);
+
+  // Socket.io listener for realtime conversation updates
+  useEffect(() => {
+    if (!socket) return;
+
+    console.log('📡 Setting up socket listeners for conversation list');
+
+    // Listen for new messages to update conversation list
+    const handleMessageReceived = (data: { message: Message; conversation_id: string }) => {
+      console.log('✉️ Conversation list received message event:', data);
+      
+      setConversations((prev) => {
+        return prev.map((conv) => {
+          if (conv._id === data.conversation_id) {
+            // Update last_message and timestamp
+            return {
+              ...conv,
+              last_message: data.message,
+              updated_at: data.message.created_at,
+            };
+          }
+          return conv;
+        }).sort((a, b) => {
+          // Sort by updated_at (most recent first)
+          const aTime = new Date(a.updated_at || a.created_at).getTime();
+          const bTime = new Date(b.updated_at || b.created_at).getTime();
+          return bTime - aTime;
+        });
+      });
+    };
+
+    socket.on('message_received', handleMessageReceived);
+
+    return () => {
+      console.log('🔌 Cleaning up conversation list socket listeners');
+      socket.off('message_received', handleMessageReceived);
+    };
+  }, [socket]);
 
   const fetchConversations = async () => {
     // Check if token exists before making request
@@ -123,7 +164,7 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
 
   const filteredConversations = conversations.filter((conv) => {
     if (!searchQuery) return true;
-    const name = getConversationName(conv).toLowerCase();
+    const name = getConversationName(conv, user?._id).toLowerCase();
     const message = getLastMessagePreview(conv).toLowerCase();
     return name.includes(searchQuery.toLowerCase()) || message.includes(searchQuery.toLowerCase());
   });
@@ -190,7 +231,7 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
             </div>
           ) : (
             filteredConversations.map((conv) => {
-              const name = getConversationName(conv);
+              const name = getConversationName(conv, user?._id);
               const lastMessage = getLastMessagePreview(conv);
               const timeAgo = getTimeAgo(conv.updated_at || conv.created_at);
               
