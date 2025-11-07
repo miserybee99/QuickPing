@@ -178,55 +178,51 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
   }
 
   return (
-    <div className="w-[380px] border-r flex flex-col bg-background">
+    <div className="border-r border-gray-200 flex flex-col bg-white shadow-[1px_0px_0px_0px_rgba(0,0,0,0.08)] h-full">
       {/* Header */}
-      <div className="p-4 border-b">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold">Messages</h2>
-            <Badge variant="secondary" className="rounded-full">
-              {conversations.length}
-            </Badge>
+      <div className="flex flex-col flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-6">
+          <div className="flex items-center gap-[10px]">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-[20px] font-semibold">Messages</h2>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-800">
+                <path d="M2.72 5.97L8 10.56L13.28 5.97" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="px-2 py-0.5 bg-[#EDF2F7] rounded-[24px]">
+              <span className="text-[12px] font-semibold">{conversations.length}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Button 
-              size="icon" 
-              variant="ghost" 
-              className="rounded-full h-10 w-10"
-              onClick={() => setSearchDialogOpen(true)}
-              title="Tin nhắn mới"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
-            <Button 
-              size="icon" 
-              variant="ghost" 
-              className="rounded-full h-10 w-10 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-              onClick={handleLogout}
-              title="Đăng xuất"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
+          <button 
+            onClick={() => setSearchDialogOpen(true)}
+            className="w-10 h-10 flex items-center justify-center bg-[#615EF0]/10 text-[#615EF0] hover:bg-[#615EF0]/20 rounded-full transition-colors"
+            title="Tin nhắn mới"
+          >
+            <Plus className="w-6 h-6 stroke-[2]" />
+          </button>
         </div>
+        <div className="h-px bg-black opacity-[0.08]" />
         
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search messages"
-            className="pl-10 bg-muted/50"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="px-6 py-3">
+          <div className="flex items-center gap-[10px] px-5 py-2.5 bg-[#F3F3F3] rounded-xl">
+            <Search className="h-3.5 w-3.5 text-gray-600 opacity-40" />
+            <input
+              type="text"
+              placeholder="Search messages"
+              className="flex-1 bg-transparent border-none outline-none text-sm text-gray-600 opacity-40 placeholder:text-gray-600"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
       {/* Conversations List */}
-      <ScrollArea className="flex-1">
-        <div className="divide-y">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 py-2 space-y-2">
           {filteredConversations.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
+            <div className="p-4 text-center text-gray-500">
               {searchQuery ? 'No conversations found' : 'No conversations yet'}
             </div>
           ) : (
@@ -240,43 +236,54 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
                   key={conv._id}
                   onClick={() => onSelect(conv._id)}
                   className={cn(
-                    'p-4 cursor-pointer hover:bg-muted/50 transition-colors',
-                    selectedId === conv._id && 'bg-muted'
+                    'flex gap-4 p-3 cursor-pointer rounded-xl transition-all',
+                    selectedId === conv._id 
+                      ? 'bg-[#615EF0]/6' 
+                      : 'hover:bg-[#615EF0]/6'
                   )}
                 >
-                  <div className="flex gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage 
-                        src={
-                          conv.type === 'direct'
-                            ? conv.participants?.find(p => p.user_id?.username !== name)?.user_id?.avatar_url
-                            : undefined
-                        } 
-                      />
-                      <AvatarFallback>{name[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                    </Avatar>
+                  <Avatar className="h-12 w-12 flex-shrink-0 rounded-xl">
+                    <AvatarImage 
+                      src={
+                        conv.type === 'direct'
+                          ? conv.participants?.find(p => p.user_id?._id !== user?._id)?.user_id?.avatar_url
+                          : undefined
+                      } 
+                    />
+                    <AvatarFallback className="rounded-xl bg-gray-200">
+                      {name[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <span className="font-semibold text-[14px] leading-[21px] truncate">
+                        {name}
+                      </span>
+                      <span className="text-[14px] font-semibold text-gray-900 opacity-30 flex-shrink-0">
+                        {timeAgo}
+                      </span>
+                    </div>
                     
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-sm truncate">
-                          {name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {timeAgo}
+                    <p className="text-[14px] leading-[21px] text-gray-900 opacity-40 truncate mb-2">
+                      {lastMessage}
+                    </p>
+
+                    {/* Badges */}
+                    {conv.type === 'group' && (
+                      <div className="flex gap-2">
+                        <span className="px-2 py-0.5 bg-[#FEEBC8] text-[#DD6B20] text-[12px] font-semibold rounded-xl">
+                          Group
                         </span>
                       </div>
-                      
-                      <p className="text-sm text-muted-foreground truncate mb-2">
-                        {lastMessage}
-                      </p>
-                    </div>
+                    )}
                   </div>
                 </div>
               );
             })
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Search Users Dialog */}
       <SearchUsersDialog 

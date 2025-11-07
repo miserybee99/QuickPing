@@ -1,0 +1,133 @@
+=== BÁO CÁO CODE PROJECT CHAT REALTIME ===
+Generated: Fri Nov  7 21:24:04 +07 2025
+==========================================
+
+📁 CẤU TRÚC PROJECT:
+==========================================
+.
+├── README.md
+├── backend
+│   ├── config
+│   │   └── database.js
+│   ├── kill-port.sh
+│   ├── middleware
+│   │   └── auth.js
+│   ├── models
+│   │   ├── Conversation.js
+│   │   ├── File.js
+│   │   ├── Friendship.js
+│   │   ├── Message.js
+│   │   ├── Notification.js
+│   │   ├── School.js
+│   │   ├── User.js
+│   │   ├── UserSession.js
+│   │   └── Vote.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── routes
+│   │   ├── ai.js
+│   │   ├── auth.js
+│   │   ├── conversations.js
+│   │   ├── files.js
+│   │   ├── friends.js
+│   │   ├── messages.js
+│   │   ├── users.js
+│   │   └── votes.js
+│   ├── scripts
+│   │   ├── checkUser.js
+│   │   ├── fixPasswordHash.js
+│   │   ├── resetPassword.js
+│   │   ├── test-api.js
+│   │   └── testPassword.js
+│   ├── server.js
+│   ├── socket
+│   │   └── socket.js
+│   └── uploads
+├── frontend
+│   ├── README.md
+│   ├── app
+│   │   ├── (chat)
+│   │   │   └── page.tsx
+│   │   ├── api
+│   │   │   └── conversations
+│   │   ├── files
+│   │   │   └── page.tsx
+│   │   ├── friends
+│   │   │   └── page.tsx
+│   │   ├── globals.css
+│   │   ├── groups
+│   │   │   └── create
+│   │   │       └── page.tsx
+│   │   ├── layout.tsx
+│   │   ├── login
+│   │   │   └── page.tsx
+│   │   ├── notifications
+│   │   │   └── page.tsx
+│   │   ├── profile
+│   │   │   └── page.tsx
+│   │   ├── register
+│   │   │   └── page.tsx
+│   │   ├── search
+│   │   │   └── page.tsx
+│   │   └── settings
+│   ├── cleanup.sh
+│   ├── components
+│   │   ├── chat
+│   │   │   ├── chat-panel.tsx
+│   │   │   ├── directory-panel.tsx
+│   │   │   ├── messages-panel.tsx
+│   │   │   └── search-users-dialog.tsx
+│   │   ├── emoji
+│   │   │   └── emoji-picker.tsx
+│   │   ├── file-upload
+│   │   │   ├── file-dropzone.tsx
+│   │   │   └── file-upload-progress.tsx
+│   │   ├── modals
+│   │   │   ├── file-preview-modal.tsx
+│   │   │   └── user-profile-modal.tsx
+│   │   ├── navigation
+│   │   │   └── sidebar.tsx
+│   │   ├── reactions
+│   │   │   └── reaction-viewer.tsx
+│   │   └── ui
+│   │       ├── avatar.tsx
+│   │       ├── badge.tsx
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── checkbox.tsx
+│   │       ├── dialog.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── popover.tsx
+│   │       ├── progress.tsx
+│   │       ├── scroll-area.tsx
+│   │       ├── select.tsx
+│   │       ├── separator.tsx
+│   │       ├── slider.tsx
+│   │       ├── switch.tsx
+│   │       ├── tabs.tsx
+│   │       └── textarea.tsx
+│   ├── components.json
+│   ├── contexts
+│   │   ├── SidebarContext.tsx
+│   │   └── SocketContext.tsx
+│   ├── hooks
+│   │   └── useUser.ts
+│   ├── lib
+│   │   ├── api.ts
+│   │   └── utils.ts
+│   ├── next-env.d.ts
+│   ├── next.config.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   └── types
+│       └── index.ts
+├── project_code_report_20251107_212404.txt
+└── scan_project.sh
+
+36 directories, 87 files
+
+✅ HOÀN THÀNH

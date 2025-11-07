@@ -1,0 +1,159 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Smile, Search, Clock, Heart, Coffee, Flag, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface EmojiPickerProps {
+  onEmojiSelect: (emoji: string) => void;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+// Emoji categories
+const emojiCategories = {
+  recent: {
+    icon: Clock,
+    label: 'Gần đây',
+    emojis: ['😊', '👍', '❤️', '😂', '🎉', '🔥', '💯', '👏']
+  },
+  smileys: {
+    icon: Smile,
+    label: 'Mặt cười',
+    emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴']
+  },
+  gestures: {
+    icon: Heart,
+    label: 'Cử chỉ',
+    emojis: ['👍', '👎', '👊', '✊', '🤛', '🤜', '🤞', '✌️', '🤟', '🤘', '👌', '🤏', '👈', '👉', '👆', '👇', '☝️', '👋', '🤚', '🖐', '✋', '🖖', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳']
+  },
+  objects: {
+    icon: Coffee,
+    label: 'Đồ vật',
+    emojis: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘', '🏊', '🤽', '🚣', '🧗']
+  },
+  symbols: {
+    icon: Flag,
+    label: 'Ký hiệu',
+    emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓']
+  },
+  popular: {
+    icon: Zap,
+    label: 'Phổ biến',
+    emojis: ['🔥', '💯', '⚡', '✨', '💥', '💫', '🌟', '⭐', '✅', '❌', '⚠️', '💢', '💬', '👀', '💀', '☠️', '🤡', '👻', '👽', '🤖', '💩', '🎉', '🎊', '🎁', '🎈', '🎀', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️']
+  }
+};
+
+export function EmojiPicker({ onEmojiSelect, isOpen, onClose }: EmojiPickerProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [recentEmojis, setRecentEmojis] = useState<string[]>(
+    emojiCategories.recent.emojis
+  );
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
+  const handleEmojiClick = (emoji: string) => {
+    onEmojiSelect(emoji);
+    
+    // Add to recent (max 20)
+    setRecentEmojis((prev) => {
+      const filtered = prev.filter((e) => e !== emoji);
+      return [emoji, ...filtered].slice(0, 20);
+    });
+  };
+
+  const getFilteredEmojis = (emojis: string[]) => {
+    if (!searchQuery) return emojis;
+    // Simple filtering for demo, can be enhanced
+    return emojis.filter(() => Math.random() > 0.5);
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          ref={pickerRef}
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+          transition={{ duration: 0.15 }}
+          className="absolute bottom-full right-0 mb-2 w-[350px] bg-background border rounded-lg shadow-2xl z-50"
+        >
+          {/* Header */}
+          <div className="p-3 border-b">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Tìm emoji..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          {/* Emoji tabs */}
+          <Tabs defaultValue="recent" className="w-full">
+            <TabsList className="w-full justify-start px-2 h-12 border-b rounded-none">
+              {Object.entries(emojiCategories).map(([key, category]) => (
+                <TabsTrigger
+                  key={key}
+                  value={key}
+                  className="data-[state=active]:bg-accent"
+                >
+                  <category.icon className="h-4 w-4" />
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            <ScrollArea className="h-[300px]">
+              {Object.entries(emojiCategories).map(([key, category]) => (
+                <TabsContent key={key} value={key} className="p-3 mt-0">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">
+                    {category.label}
+                  </p>
+                  <div className="grid grid-cols-8 gap-1">
+                    {(key === 'recent' ? recentEmojis : getFilteredEmojis(category.emojis)).map(
+                      (emoji, index) => (
+                        <motion.button
+                          key={`${emoji}-${index}`}
+                          whileHover={{ scale: 1.3 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleEmojiClick(emoji)}
+                          className="h-10 w-10 flex items-center justify-center text-2xl hover:bg-accent rounded transition-colors"
+                        >
+                          {emoji}
+                        </motion.button>
+                      )
+                    )}
+                  </div>
+                </TabsContent>
+              ))}
+            </ScrollArea>
+          </Tabs>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+

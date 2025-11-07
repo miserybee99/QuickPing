@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Phone, MoreVertical, Send, Paperclip, Smile } from 'lucide-react';
+import { Phone, Send, Paperclip } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   const [sending, setSending] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (conversationId) {
@@ -154,7 +155,9 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   };
 
   const getConversationName = (): string => {
@@ -190,7 +193,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
 
   if (!conversationId) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+      <div className="flex items-center justify-center h-full text-muted-foreground">
         <p>Select a conversation to start chatting</p>
       </div>
     );
@@ -198,7 +201,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
 
   if (!conversation || loading) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+      <div className="flex items-center justify-center h-full text-muted-foreground">
         <p>Loading conversation...</p>
       </div>
     );
@@ -208,45 +211,47 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   const conversationName = getConversationName();
 
   return (
-    <div className="flex-1 flex flex-col bg-background">
+    <div className="flex flex-col bg-white h-full overflow-hidden">
       {/* Header */}
-      <div className="h-16 border-b flex items-center justify-between px-6">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={otherParticipant?.avatar_url} />
-            <AvatarFallback>{conversationName[0]?.toUpperCase() || 'U'}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="font-semibold">{conversationName}</h3>
-            {conversation.type === 'direct' && otherParticipant?.is_online && (
-              <div className="flex items-center gap-1 text-sm text-green-600">
-                <div className="h-2 w-2 rounded-full bg-green-600" />
-                Online
-              </div>
-            )}
-            {conversation.type === 'group' && (
-              <p className="text-xs text-muted-foreground">
-                {conversation.participants?.length || 0} thành viên
-              </p>
-            )}
+      <div className="flex flex-col flex-shrink-0 z-10">
+        <div className="h-20 flex items-center justify-between px-6">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-10 w-10 rounded-[10px]">
+              <AvatarImage src={otherParticipant?.avatar_url} />
+              <AvatarFallback className="rounded-[10px] bg-gray-200">
+                {conversationName[0]?.toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="font-semibold text-[20px] leading-[25px]">{conversationName}</h3>
+              {conversation.type === 'direct' && (
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className="h-2.5 w-2.5 rounded-full bg-[#68D391]" />
+                  <span className="text-[12px] font-semibold text-gray-900 opacity-60">
+                    Online
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
+          
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#615EF0]/10 rounded-lg hover:bg-[#615EF0]/20 transition-colors">
+            <Phone className="w-6 h-6 text-[#615EF0]" strokeWidth={1.5} />
+            <span className="text-[16px] font-semibold text-[#615EF0]">Call</span>
+          </button>
         </div>
-        
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="text-primary">
-            <Phone className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <MoreVertical className="h-5 w-5" />
-          </Button>
-        </div>
+        <div className="h-px bg-black opacity-[0.08]" />
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-6">
-        <div className="space-y-4 max-w-4xl mx-auto">
+      <div 
+        ref={messagesContainerRef} 
+        className="flex-1 px-6 py-6 bg-white overflow-y-scroll"
+        style={{ minHeight: 0 }}
+      >
+        <div className="space-y-8">
           {messages.length === 0 ? (
-            <div className="text-center text-muted-foreground mt-8">
+            <div className="text-center text-gray-500 mt-8">
               Chưa có tin nhắn nào. Bắt đầu cuộc trò chuyện!
             </div>
           ) : (
@@ -260,38 +265,41 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
               const messageId = msg._id?.toString() || `temp-${index}`;
               const uniqueKey = `${messageId}-${index}`;
               
+              // Group consecutive messages from same sender
+              const prevMsg = messages[index - 1];
+              const nextMsg = messages[index + 1];
+              const sameSenderBefore = prevMsg && prevMsg.sender_id?._id === msg.sender_id?._id;
+              const sameSenderAfter = nextMsg && nextMsg.sender_id?._id === msg.sender_id?._id;
+              
               return (
                 <div key={uniqueKey}>
                   {showDate && (
-                    <div className="text-center text-xs text-muted-foreground my-4">
+                    <div className="text-center text-xs text-gray-500 my-4">
                       {format(new Date(msg.created_at), 'dd/MM/yyyy', { locale: vi })}
                     </div>
                   )}
                   
-                  <div className={cn('flex gap-3', isOwn ? 'justify-end' : 'justify-start')}>
-                    {!isOwn && (
-                      <Avatar className="h-8 w-8">
+                  <div className={cn('flex gap-4', isOwn ? 'flex-row-reverse' : 'flex-row', sameSenderBefore && 'mt-2.5')}>
+                    {!isOwn && !sameSenderBefore && (
+                      <Avatar className="h-10 w-10 flex-shrink-0 rounded-[8.33px]">
                         <AvatarImage src={msg.sender_id?.avatar_url} />
-                        <AvatarFallback>{msg.sender_id?.username?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                        <AvatarFallback className="rounded-[8.33px] bg-gray-200">
+                          {msg.sender_id?.username?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
                       </Avatar>
                     )}
+                    {!isOwn && sameSenderBefore && <div className="w-10 flex-shrink-0" />}
                     
-                    <div className={cn('max-w-xs lg:max-w-md', isOwn && 'order-first')}>
-                      {!isOwn && (
-                        <div className="text-xs text-muted-foreground mb-1">
-                          {msg.sender_id?.username}
-                        </div>
-                      )}
-                      
+                    <div className={cn('flex flex-col gap-2.5', isOwn ? 'items-end' : 'items-start')}>
                       <div
                         className={cn(
-                          'px-4 py-2 rounded-2xl',
+                          'px-4 py-2 rounded-xl max-w-md',
                           isOwn
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
+                            ? 'bg-[#615EF0] text-white'
+                            : 'bg-[#F1F1F1] text-gray-900'
                         )}
                       >
-                        {msg.content && <p className="text-sm">{msg.content}</p>}
+                        {msg.content && <p className="text-[14px] leading-[21px]">{msg.content}</p>}
                         
                         {msg.file_info && (
                           <div className="mt-2">
@@ -299,12 +307,17 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                           </div>
                         )}
                       </div>
-                      
-                      <div className={cn('text-xs mt-1', isOwn ? 'text-primary/70' : 'text-muted-foreground')}>
-                        {format(new Date(msg.created_at), 'HH:mm')}
-                        {msg.is_edited && <span className="ml-1">(đã chỉnh sửa)</span>}
-                      </div>
                     </div>
+
+                    {isOwn && !sameSenderAfter && (
+                      <Avatar className="h-10 w-10 flex-shrink-0 rounded-[8.33px]">
+                        <AvatarImage src={currentUser?.avatar_url} />
+                        <AvatarFallback className="rounded-[8.33px] bg-gray-200">
+                          {currentUser?.username?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                    {isOwn && sameSenderAfter && <div className="w-10 flex-shrink-0" />}
                   </div>
                 </div>
               );
@@ -313,36 +326,33 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
           
           <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Input */}
-      <div className="p-4 border-t">
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2 max-w-4xl mx-auto">
-          <Button type="button" variant="ghost" size="icon">
-            <Paperclip className="h-5 w-5" />
-          </Button>
-          
-          <div className="flex-1 relative">
-            <Input
-              placeholder="Type a message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="pr-10"
-              disabled={sending}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2"
-            >
-              <Smile className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          <Button type="submit" size="icon" className="rounded-full" disabled={!message.trim() || sending}>
-            <Send className="h-4 w-4" />
-          </Button>
+      <div className="flex items-center gap-6 px-6 py-6 flex-shrink-0 bg-white border-t border-gray-200 z-10">
+        <button type="button" className="flex-shrink-0 text-gray-600 hover:text-gray-900 transition-colors">
+          <Paperclip className="w-6 h-6" strokeWidth={1.5} />
+        </button>
+        
+        <form onSubmit={handleSendMessage} className="flex-1 flex items-center gap-[10px] px-5 py-2.5 bg-white border-2 border-[#E2E8F0] rounded-xl">
+          <input
+            type="text"
+            placeholder="Type a message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="flex-1 bg-transparent border-none outline-none text-[14px] leading-[21px] text-gray-900 placeholder:text-gray-900 placeholder:opacity-40"
+            disabled={sending}
+          />
+          <button
+            type="submit"
+            disabled={!message.trim() || sending}
+            className={cn(
+              "flex-shrink-0 transition-colors",
+              message.trim() ? "text-[#615EF0] hover:text-[#615EF0]/80" : "text-gray-400"
+            )}
+          >
+            <Send className="w-5 h-5" strokeWidth={1.5} />
+          </button>
         </form>
       </div>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MoreVertical, Download, FileText, Image, FileSpreadsheet, File } from 'lucide-react';
+import { Download, FileText, Image, FileSpreadsheet, File, MoreHorizontal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -114,46 +114,47 @@ export function DirectoryPanel({ conversation }: DirectoryPanelProps) {
   };
 
   return (
-    <div className="w-[340px] border-l flex flex-col bg-background">
+    <div className="border-l border-gray-200 flex flex-col bg-white shadow-[1px_0px_0px_0px_rgba(0,0,0,0.08)] h-full">
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="font-semibold">Directory</h2>
-        <Button variant="ghost" size="icon">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
+      <div className="flex flex-col flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-6">
+          <h2 className="text-[20px] font-semibold">Directory</h2>
+          <button className="w-10 h-10 flex items-center justify-center bg-[#EFEFFD] hover:bg-[#615EF0]/20 rounded-full transition-colors">
+            <MoreHorizontal className="w-6 h-6 text-[#615EF0]" strokeWidth={2} />
+          </button>
+        </div>
+        <div className="h-px bg-black opacity-[0.08]" />
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         {/* Team Members */}
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-sm">
-                {conversation?.type === 'group' ? 'Group Members' : 'Participants'}
-              </h3>
-              <Badge variant="secondary" className="rounded-full">
-                {teamMembers.length}
-              </Badge>
+        <div className="flex flex-col gap-2 px-4 pt-6">
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-[14px] font-semibold leading-[21px]">Team Members</h3>
+            <div className="px-2 py-0.5 bg-[#EDF2F7] rounded-[24px]">
+              <span className="text-[12px] font-semibold">{teamMembers.length}</span>
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {loading ? (
-              <p className="text-sm text-muted-foreground">Loading...</p>
+              <p className="text-sm text-gray-500">Loading...</p>
             ) : teamMembers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500 p-3">
                 {conversation ? 'No members found' : 'Select a conversation to see members'}
               </p>
             ) : (
               teamMembers.map((member) => (
-                <div key={member._id} className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
+                <div key={member._id} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  <Avatar className="h-12 w-12 rounded-xl flex-shrink-0">
                     <AvatarImage src={member.avatar_url} />
-                    <AvatarFallback>{member.username[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                    <AvatarFallback className="rounded-xl bg-gray-200">
+                      {member.username[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{member.username}</p>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-[14px] font-semibold leading-[21px] truncate">{member.username}</p>
+                    <p className="text-[12px] font-semibold text-gray-900 opacity-40 truncate">
                       {member.mssv || member.role || 'Member'}
                     </p>
                   </div>
@@ -163,66 +164,90 @@ export function DirectoryPanel({ conversation }: DirectoryPanelProps) {
           </div>
         </div>
 
-        <Separator />
+        <div className="h-px bg-black opacity-[0.08] my-6" />
 
         {/* Files */}
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-sm">Files</h3>
-              <Badge variant="secondary" className="rounded-full">
-                {files.length}
-              </Badge>
+        <div className="flex flex-col gap-2 px-4">
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-[14px] font-semibold leading-[21px]">Files</h3>
+            <div className="px-2 py-0.5 bg-[#EDF2F7] rounded-[24px]">
+              <span className="text-[12px] font-semibold">{files.length}</span>
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {loading ? (
-              <p className="text-sm text-muted-foreground">Loading files...</p>
+              <p className="text-sm text-gray-500">Loading files...</p>
             ) : files.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500 p-3">
                 {conversation ? 'No files in this conversation' : 'Select a conversation to see files'}
               </p>
             ) : (
               files.map((file) => {
-                const Icon = getFileIcon(file.mime_type);
-                const color = getFileColor(file.mime_type);
                 const extension = getFileExtension(file.original_name);
+                const getBgColor = () => {
+                  if (file.mime_type?.startsWith('image/')) return 'bg-[#F0FFF4]';
+                  if (file.mime_type?.includes('pdf')) return 'bg-[#FFF5F5]';
+                  if (file.mime_type?.includes('word') || file.mime_type?.includes('document')) return 'bg-[#EBF8FF]';
+                  if (file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) return 'bg-[#FAF5FF]';
+                  return 'bg-gray-100';
+                };
+                
+                const getIconColor = () => {
+                  if (file.mime_type?.startsWith('image/')) return 'text-[#48BB78]';
+                  if (file.mime_type?.includes('pdf')) return 'text-[#F56565]';
+                  if (file.mime_type?.includes('word') || file.mime_type?.includes('document')) return 'text-[#4299E1]';
+                  if (file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) return 'text-[#9F7AEA]';
+                  return 'text-gray-600';
+                };
 
                 return (
                   <div
                     key={file._id}
-                    className="flex items-center gap-3 group hover:bg-muted/50 p-2 rounded-lg transition-colors cursor-pointer"
+                    className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
                   >
-                    <div className={cn('p-2 bg-muted rounded-lg', color)}>
-                      <Icon className="h-5 w-5" />
+                    <div className={cn('w-12 h-12 flex items-center justify-center rounded-xl', getBgColor())}>
+                      {file.mime_type?.includes('pdf') && (
+                        <FileText className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
+                      )}
+                      {file.mime_type?.startsWith('image/') && (
+                        <Image className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
+                      )}
+                      {(file.mime_type?.includes('word') || file.mime_type?.includes('document')) && (
+                        <FileText className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
+                      )}
+                      {(file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) && (
+                        <FileSpreadsheet className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
+                      )}
+                      {!['pdf', 'image', 'word', 'document', 'spreadsheet', 'excel'].some(t => file.mime_type?.includes(t)) && (
+                        <File className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{file.original_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {extension} {formatFileSize(file.size)}
-                      </p>
+                      <p className="text-[14px] font-semibold leading-[21px] truncate">{file.original_name}</p>
+                      <div className="flex gap-2.5">
+                        <span className="text-[12px] font-semibold text-gray-900 opacity-40">{extension}</span>
+                        <span className="text-[12px] font-semibold text-gray-900 opacity-40">{formatFileSize(file.size)}</span>
+                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         if (file.url && file.url !== '#') {
                           window.open(file.url, '_blank');
                         }
                       }}
+                      className="flex-shrink-0 text-[#615EF0] hover:text-[#615EF0]/80 transition-colors"
                     >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                      <Download className="w-5 h-5" strokeWidth={1.5} />
+                    </button>
                   </div>
                 );
               })
             )}
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

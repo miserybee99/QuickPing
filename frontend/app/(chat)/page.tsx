@@ -47,7 +47,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="grid h-full bg-background" style={{ gridTemplateColumns: '349px 1fr 362px' }}>
       {/* Messages List */}
       <MessagesPanel 
         selectedId={selectedConversationId}
