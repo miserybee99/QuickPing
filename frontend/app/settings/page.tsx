@@ -90,8 +90,8 @@ export default function SettingsPage() {
           {/* Header with Close Button */}
           <div className="mb-8 flex items-start justify-between">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold">Settings</h1>
-              <p className="text-gray-600 mt-2">Quản lý tài khoản và tùy chỉnh trải nghiệm của bạn</p>
+            <h1 className="text-3xl font-bold">Settings</h1>
+            <p className="text-gray-600 mt-2">Quản lý tài khoản và tùy chỉnh trải nghiệm của bạn</p>
             </div>
             
             {/* Close Button - ESC Style */}

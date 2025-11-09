@@ -37,7 +37,7 @@ export default function ProfilePage() {
         bio: user.bio || '',
         avatar_url: user.avatar_url || '',
         mssv: user.mssv || '',
-      });
+  });
     }
   }, [user]);
 
@@ -97,7 +97,7 @@ export default function ProfilePage() {
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+              <Save className="h-4 w-4 mr-2" />
                   Lưu thay đổi
                 </>
               )}
@@ -107,29 +107,29 @@ export default function ProfilePage() {
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
-        >
+            >
           {/* Profile Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Thông tin cá nhân</CardTitle>
-              <CardDescription>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Thông tin cá nhân</CardTitle>
+                  <CardDescription>
                 Cập nhật thông tin hồ sơ hiển thị công khai của bạn
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
               {/* Avatar Section */}
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative">
                   <Avatar className="h-32 w-32">
-                    <AvatarImage src={profile.avatar_url} />
+                      <AvatarImage src={profile.avatar_url} />
                     <AvatarFallback className="text-4xl">
-                      {profile.username?.[0]?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                        {profile.username?.[0]?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                   {user?.is_online && (
                     <div className="absolute bottom-2 right-2 h-6 w-6 rounded-full bg-green-500 border-4 border-background" />
                   )}
@@ -143,42 +143,42 @@ export default function ProfilePage() {
                     </Badge>
                   )}
                   <div className="mt-4">
-                    <Button variant="outline" size="sm">
-                      <Camera className="h-4 w-4 mr-2" />
-                      Đổi ảnh đại diện
-                    </Button>
+                      <Button variant="outline" size="sm">
+                        <Camera className="h-4 w-4 mr-2" />
+                        Đổi ảnh đại diện
+                      </Button>
                     <p className="text-xs text-muted-foreground mt-2">
-                      JPG, PNG hoặc GIF. Tối đa 5MB.
-                    </p>
+                        JPG, PNG hoặc GIF. Tối đa 5MB.
+                      </p>
                   </div>
-                </div>
-              </div>
+                    </div>
+                  </div>
 
-              <Separator />
+                  <Separator />
 
               {/* Profile Fields */}
               <div className="grid gap-6">
-                {/* Username */}
-                <div className="space-y-2">
+                  {/* Username */}
+                  <div className="space-y-2">
                   <Label htmlFor="username">Tên hiển thị</Label>
-                  <Input
-                    id="username"
-                    value={profile.username}
-                    onChange={(e) => setProfile({ ...profile, username: e.target.value })}
+                    <Input
+                      id="username"
+                      value={profile.username}
+                      onChange={(e) => setProfile({ ...profile, username: e.target.value })}
                     placeholder="Nhập tên hiển thị"
-                  />
+                    />
                   <p className="text-xs text-muted-foreground">
                     Tên này sẽ hiển thị cho người khác khi họ nhìn thấy bạn
                   </p>
-                </div>
+                  </div>
 
-                {/* Email */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profile.email}
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={profile.email}
                     disabled
                     className="bg-muted"
                   />
@@ -200,54 +200,54 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                {/* Bio */}
-                <div className="space-y-2">
+                  {/* Bio */}
+                  <div className="space-y-2">
                   <Label htmlFor="bio">Giới thiệu bản thân</Label>
-                  <Textarea
-                    id="bio"
-                    value={profile.bio}
-                    onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                    placeholder="Viết vài dòng về bạn..."
-                    rows={4}
+                    <Textarea
+                      id="bio"
+                      value={profile.bio}
+                      onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                      placeholder="Viết vài dòng về bạn..."
+                      rows={4}
                     maxLength={200}
-                  />
+                    />
                   <p className="text-xs text-muted-foreground text-right">
-                    {profile.bio.length}/200 ký tự
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                      {profile.bio.length}/200 ký tự
+                    </p>
+                  </div>
+                  </div>
+                </CardContent>
+              </Card>
 
           {/* Account Stats */}
-          <Card>
-            <CardHeader>
+              <Card>
+                <CardHeader>
               <CardTitle>Thống kê tài khoản</CardTitle>
-            </CardHeader>
+                </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-2xl font-bold text-primary">0</p>
                   <p className="text-sm text-muted-foreground">Bạn bè</p>
-                </div>
+                      </div>
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-2xl font-bold text-primary">0</p>
                   <p className="text-sm text-muted-foreground">Nhóm</p>
-                </div>
+                    </div>
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-2xl font-bold text-primary">0</p>
                   <p className="text-sm text-muted-foreground">Tin nhắn</p>
-                </div>
+                    </div>
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-2xl font-bold text-primary">
                     {user?.is_verified ? '✓' : '✗'}
                   </p>
                   <p className="text-sm text-muted-foreground">Xác thực</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
       </div>
     </div>
   );

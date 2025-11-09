@@ -85,7 +85,7 @@ export default function FriendsPage() {
     
     setActionLoading(userId);
     try {
-      setFriends(friends.filter((f) => f._id !== userId));
+    setFriends(friends.filter((f) => f._id !== userId));
     } catch (error) {
       console.error('Error removing friend:', error);
     } finally {
@@ -96,7 +96,7 @@ export default function FriendsPage() {
   const handleUnblock = async (userId: string) => {
     setActionLoading(userId);
     try {
-      setBlocked(blocked.filter((b) => b._id !== userId));
+    setBlocked(blocked.filter((b) => b._id !== userId));
     } catch (error) {
       console.error('Error unblocking user:', error);
     } finally {
@@ -192,9 +192,9 @@ export default function FriendsPage() {
                 )}
               </div>
             ) : (
-              <ScrollArea className="h-[600px]">
-                <div className="grid gap-4 md:grid-cols-2">
-                  {filteredFriends.map((friend) => (
+            <ScrollArea className="h-[600px]">
+              <div className="grid gap-4 md:grid-cols-2">
+                {filteredFriends.map((friend) => (
                   <motion.div
                     key={friend._id}
                     initial={{ opacity: 0, y: 20 }}
@@ -243,9 +243,9 @@ export default function FriendsPage() {
                       </Button>
                     </div>
                   </motion.div>
-                  ))}
-                </div>
-              </ScrollArea>
+                ))}
+              </div>
+            </ScrollArea>
             )}
           </TabsContent>
 
@@ -261,52 +261,52 @@ export default function FriendsPage() {
                 <p>Không có lời mời kết bạn nào</p>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {requests.map((request) => (
-                  <motion.div
-                    key={request._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-4 p-4 border rounded-lg"
-                  >
-                    <Avatar className="h-12 w-12">
+            <div className="grid gap-4 md:grid-cols-2">
+              {requests.map((request) => (
+                <motion.div
+                  key={request._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-4 p-4 border rounded-lg"
+                >
+                  <Avatar className="h-12 w-12">
                       <AvatarImage src={request.user_id.avatar_url} />
-                      <AvatarFallback>
+                    <AvatarFallback>
                         {request.user_id.username?.[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
                       <p className="font-semibold truncate">{request.user_id.username}</p>
-                      <p className="text-sm text-muted-foreground truncate">
+                    <p className="text-sm text-muted-foreground truncate">
                         {request.user_id.email}
-                      </p>
-                    </div>
+                    </p>
+                  </div>
 
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleAcceptRequest(request._id)}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleAcceptRequest(request._id)}
                         disabled={actionLoading === request._id}
-                      >
+                    >
                         {actionLoading === request._id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Check className="h-4 w-4" />
+                      <Check className="h-4 w-4" />
                         )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleRejectRequest(request._id)}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRejectRequest(request._id)}
                         disabled={actionLoading === request._id}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
             )}
           </TabsContent>
 
@@ -322,8 +322,8 @@ export default function FriendsPage() {
                 <p>Không có người dùng nào bị chặn</p>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {blocked.map((user) => (
+            <div className="grid gap-4 md:grid-cols-2">
+              {blocked.map((user) => (
                 <motion.div
                   key={user._id}
                   initial={{ opacity: 0, y: 20 }}
@@ -353,13 +353,13 @@ export default function FriendsPage() {
                     {actionLoading === user._id ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                      <UserX className="h-4 w-4 mr-2" />
+                    <UserX className="h-4 w-4 mr-2" />
                     )}
                     Bỏ chặn
                   </Button>
                 </motion.div>
-                ))}
-              </div>
+              ))}
+            </div>
             )}
           </TabsContent>
         </Tabs>

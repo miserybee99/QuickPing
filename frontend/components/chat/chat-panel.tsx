@@ -274,7 +274,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       });
 
       const newMessage = response.data.message;
-      const messageId = newMessage._id?.toString();
+        const messageId = newMessage._id?.toString();
       console.log('✅ Message sent successfully:', messageId);
       
       // Track message ID
@@ -300,7 +300,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
           const dateA = new Date(a.created_at || 0).getTime();
           const dateB = new Date(b.created_at || 0).getTime();
           return dateA - dateB;
-        });
+      });
         
         return newMessages;
       });
@@ -504,6 +504,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                   )}
                   
                   <div className={cn('flex gap-4', isOwn ? 'flex-row-reverse' : 'flex-row', sameSenderBefore && 'mt-2.5')}>
+                    {/* Only show avatar for other person's messages */}
                     {!isOwn && !sameSenderBefore && (
                       <Avatar className="h-10 w-10 flex-shrink-0 rounded-[8.33px]">
                         <AvatarImage src={msg.sender_id?.avatar_url} />
@@ -532,16 +533,8 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                         )}
                       </div>
                     </div>
-
-                    {isOwn && !sameSenderAfter && (
-                      <Avatar className="h-10 w-10 flex-shrink-0 rounded-[8.33px]">
-                        <AvatarImage src={currentUser?.avatar_url} />
-                        <AvatarFallback className="rounded-[8.33px] bg-gray-200">
-                          {currentUser?.username?.[0]?.toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    {isOwn && sameSenderAfter && <div className="w-10 flex-shrink-0" />}
+                    
+                    {/* Don't show avatar for own messages - standard chat UI pattern */}
                   </div>
                 </div>
               );

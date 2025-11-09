@@ -67,7 +67,7 @@ export default function CreateGroupPage() {
         description: groupData.description,
         participant_ids: groupData.members,
       });
-      router.push('/groups');
+    router.push('/groups');
     } catch (error) {
       console.error('Error creating group:', error);
       alert('Không thể tạo nhóm. Vui lòng thử lại.');
@@ -203,7 +203,7 @@ export default function CreateGroupPage() {
                       <p>Bạn chưa có bạn bè nào để thêm vào nhóm</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                  <div className="space-y-3">
                       {availableUsers.map((user) => (
                       <div
                         key={user._id}
@@ -227,8 +227,8 @@ export default function CreateGroupPage() {
                           </p>
                         </div>
                       </div>
-                      ))}
-                    </div>
+                    ))}
+                  </div>
                   )}
 
                   <p className="text-sm text-muted-foreground text-center">
@@ -267,30 +267,30 @@ export default function CreateGroupPage() {
                     )}
 
                     {groupData.members.length > 0 && (
-                      <div className="p-4 bg-muted/30 rounded-lg">
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Thành viên ({groupData.members.length})
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {groupData.members.map((memberId) => {
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Thành viên ({groupData.members.length})
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {groupData.members.map((memberId) => {
                             const user = availableUsers.find((u) => u._id === memberId);
-                            return (
-                              <div
-                                key={memberId}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-full border"
-                              >
-                                <Avatar className="h-5 w-5">
-                                  <AvatarImage src={user?.avatar_url} />
-                                  <AvatarFallback className="text-xs">
-                                    {user?.username?.[0]?.toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm">{user?.username}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
+                          return (
+                            <div
+                              key={memberId}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-full border"
+                            >
+                              <Avatar className="h-5 w-5">
+                                <AvatarImage src={user?.avatar_url} />
+                                <AvatarFallback className="text-xs">
+                                  {user?.username?.[0]?.toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm">{user?.username}</span>
+                            </div>
+                          );
+                        })}
                       </div>
+                    </div>
                     )}
                   </div>
                 </motion.div>
@@ -324,8 +324,8 @@ export default function CreateGroupPage() {
                       </>
                     ) : (
                       <>
-                        <Check className="h-4 w-4 mr-2" />
-                        Tạo nhóm
+                    <Check className="h-4 w-4 mr-2" />
+                    Tạo nhóm
                       </>
                     )}
                   </Button>

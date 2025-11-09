@@ -35,7 +35,7 @@ export function SocketProvider({ children }: SocketProviderProps) {
     // Get backend URL from environment variable or use localhost for dev
     const backendUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
       (process.env.NEXT_PUBLIC_API_URL 
-        ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') // Remove /api suffix
+      ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') // Remove /api suffix
         : 'http://localhost:5001');
 
     console.log('🔌 Connecting to socket:', backendUrl);
