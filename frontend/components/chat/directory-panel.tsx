@@ -8,6 +8,7 @@ import api from '@/lib/api';
 import { apiClient } from '@/lib/api-client';
 import { User, FileAttachment, Conversation } from '@/types';
 import { cn } from '@/lib/utils';
+import { getFileUrl } from '@/lib/file-utils';
 import { AddMembersModal } from '@/components/modals/add-members-modal';
 import { RoleManagementModal } from '@/components/modals/role-management-modal';
 import { GroupSettingsModal } from '@/components/modals/group-settings-modal';
@@ -397,7 +398,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                       onClick={(e) => {
                         e.stopPropagation();
                         if (file.url && file.url !== '#') {
-                          window.open(file.url, '_blank');
+                          window.open(getFileUrl(file.url), '_blank');
                         }
                       }}
                       className="flex-shrink-0 text-[#615EF0] hover:text-[#615EF0]/80 transition-colors"

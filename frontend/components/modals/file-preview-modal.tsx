@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getFileUrl } from '@/lib/file-utils';
 
 interface FilePreviewModalProps {
   file: {
@@ -38,7 +39,7 @@ export function FilePreviewModal({
     if (file.type.startsWith('image/')) {
       return (
         <img
-          src={file.url}
+          src={getFileUrl(file.url)}
           alt={file.name}
           className="max-h-[70vh] max-w-full object-contain rounded-lg"
         />
@@ -50,7 +51,7 @@ export function FilePreviewModal({
         <video
           controls
           className="max-h-[70vh] max-w-full rounded-lg"
-          src={file.url}
+          src={getFileUrl(file.url)}
         />
       );
     }
@@ -59,7 +60,7 @@ export function FilePreviewModal({
       return (
         <div className="bg-muted p-8 rounded-lg">
           <p className="text-center mb-4">PDF Preview</p>
-          <Button onClick={() => window.open(file.url, '_blank')}>
+          <Button onClick={() => window.open(getFileUrl(file.url), '_blank')}>
             <ExternalLink className="h-4 w-4 mr-2" />
             Mở trong tab mới
           </Button>

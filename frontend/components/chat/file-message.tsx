@@ -5,6 +5,7 @@ import { Download, Play, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FileTypeIcon, formatFileSize, getFileCategory, isPreviewable } from './file-type-icon';
 import { cn } from '@/lib/utils';
+import { getFileUrl } from '@/lib/file-utils';
 
 interface FileInfo {
   file_id: string;
@@ -330,7 +331,7 @@ export function FileMessageGrid({ files, isOwnMessage, onPreview }: FileMessageG
               onClick={() => onPreview?.(file)}
             >
               <img
-                src={file.url || `/api/files/${file.file_id}/download`}
+                src={getFileUrl(file.url)}
                 alt={file.filename}
                 className="w-full h-full object-cover"
               />
