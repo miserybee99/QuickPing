@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
+import { getFileUrl } from '@/lib/file-utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api-client';
@@ -187,7 +188,7 @@ export function AddMembersModal({
                       onCheckedChange={() => toggleUser(friend._id)}
                     />
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={friend.avatar_url} />
+                      <AvatarImage src={getFileUrl(friend.avatar_url)} />
                       <AvatarFallback>
                         {friend.username?.[0]?.toUpperCase()}
                       </AvatarFallback>

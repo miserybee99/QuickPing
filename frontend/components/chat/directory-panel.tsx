@@ -285,7 +285,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                   <div key={member._id} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors group">
                     <div className="relative">
                       <Avatar className="h-12 w-12 rounded-xl flex-shrink-0">
-                        <AvatarImage src={member.avatar_url} />
+                        <AvatarImage src={getFileUrl(member.avatar_url)} />
                         <AvatarFallback className="rounded-xl bg-gray-200">
                           {member.username[0]?.toUpperCase() || 'U'}
                         </AvatarFallback>

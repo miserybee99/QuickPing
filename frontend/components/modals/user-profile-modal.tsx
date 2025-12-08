@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { getFileUrl } from '@/lib/file-utils';
 
 interface User {
   _id: string;
@@ -75,7 +76,7 @@ export function UserProfileModal({
               <div className="px-6 -mt-16 relative">
                 <div className="relative inline-block">
                   <Avatar className="h-24 w-24 border-4 border-background">
-                    <AvatarImage src={user.avatar_url} />
+                    <AvatarImage src={getFileUrl(user.avatar_url)} />
                     <AvatarFallback className="text-2xl">
                       {user.username?.[0]?.toUpperCase()}
                     </AvatarFallback>

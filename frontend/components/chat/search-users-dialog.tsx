@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getFileUrl } from '@/lib/file-utils';
 import api from '@/lib/api';
 
 interface User {
@@ -138,7 +139,7 @@ export function SearchUsersDialog({ open, onOpenChange, onSelectUser }: SearchUs
                   >
                     <div className="relative">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={user.avatar_url} alt={user.username} />
+                        <AvatarImage src={getFileUrl(user.avatar_url)} alt={user.username} />
                         <AvatarFallback>{getInitials(user.username)}</AvatarFallback>
                       </Avatar>
                       {user.is_online && (
