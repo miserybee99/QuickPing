@@ -124,11 +124,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyFontSize(newSize);
   }, [applyFontSize]);
 
-  // Prevent flash by not rendering until mounted
+  // Don't return null - it breaks SSR/prerendering
   // The initial theme is applied via the script in layout
-  if (!mounted) {
-    return null;
-  }
+  // We still render children but with default values until mounted
 
   return (
     <ThemeContext.Provider
