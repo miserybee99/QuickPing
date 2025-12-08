@@ -32,11 +32,37 @@ services:
     ports:
       - "5001:5001"
     environment:
+      # Node Environment
       - NODE_ENV=development
       - PORT=5001
+
+      # Database
       - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/quickping}
+
+      # JWT Configuration
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+
+      # CORS Configuration
       - CORS_ORIGIN=http://localhost:3000
+
+      # Email/SMTP Configuration (Optional - defaults to console logging)
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+
+      # OTP Configuration
+      - OTP_EXPIRES_MINUTES=${OTP_EXPIRES_MINUTES:-10}
+      - OTP_MAX_ATTEMPTS=${OTP_MAX_ATTEMPTS:-5}
+      - OTP_RESEND_COOLDOWN_SECONDS=${OTP_RESEND_COOLDOWN_SECONDS:-60}
+      - OTP_MAX_RESEND_PER_HOUR=${OTP_MAX_RESEND_PER_HOUR:-5}
+
+      # Google OAuth Configuration
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://localhost:5001/api/auth/google/callback}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -59,7 +85,10 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # Node Environment
       - NODE_ENV=development
+
+      # API Configuration
       - NEXT_PUBLIC_API_URL=http://localhost:5001/api
       - NEXT_PUBLIC_SOCKET_URL=http://localhost:5001
       - BACKEND_INTERNAL_URL=http://backend:5001
@@ -83,4 +112,5 @@ volumes:
 networks:
   quickping-network:
     driver: bridge
+
 

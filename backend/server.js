@@ -5,7 +5,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import passport from 'passport';
 import connectDB from './config/database.js';
+import configurePassport from './config/passport.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import conversationRoutes from './routes/conversations.js';
@@ -65,6 +67,10 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Initialize Passport
+app.use(passport.initialize());
+configurePassport();
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

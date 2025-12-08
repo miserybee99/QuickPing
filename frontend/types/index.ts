@@ -128,3 +128,38 @@ export interface Vote {
   updated_at: Date;
 }
 
+// ==================== OTP & Auth Types ====================
+
+export interface OTPVerificationResponse {
+  message: string;
+  token: string;
+  user: User;
+}
+
+export interface SendOTPResponse {
+  message: string;
+  email: string;
+  expiresIn: number;
+}
+
+export interface ResendOTPResponse {
+  message: string;
+  email: string;
+  expiresIn: number;
+}
+
+export interface AuthResponse {
+  message?: string;
+  token: string;
+  user: User;
+  requireVerification?: boolean;
+}
+
+export interface AuthError {
+  error: string;
+  requireVerification?: boolean;
+  email?: string;
+  remainingAttempts?: number;
+  retryAfter?: number;
+}
+
