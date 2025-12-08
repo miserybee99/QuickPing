@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { getFileUrl } from '@/lib/file-utils';
 import api from '@/lib/api';
 import { apiClient } from '@/lib/api-client';
 import { Conversation } from '@/types';
@@ -296,7 +297,7 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
                     <AvatarImage 
                       src={
                         conv.type === 'direct'
-                          ? conv.participants?.find(p => p.user_id?._id !== user?._id)?.user_id?.avatar_url
+                          ? getFileUrl(conv.participants?.find(p => p.user_id?._id !== user?._id)?.user_id?.avatar_url)
                           : undefined
                       } 
                     />

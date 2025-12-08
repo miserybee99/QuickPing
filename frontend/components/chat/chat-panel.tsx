@@ -10,6 +10,7 @@ import api from '@/lib/api';
 import { apiClient } from '@/lib/api-client';
 import { Conversation, Message, User, Vote as VoteType } from '@/types';
 import { cn, formatLastSeen } from '@/lib/utils';
+import { getFileUrl } from '@/lib/file-utils';
 import { useUser } from '@/hooks/useUser';
 import { useSocket } from '@/contexts/SocketContext';
 import { useUserStatus } from '@/contexts/UserStatusContext';
@@ -1429,7 +1430,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
         <div className="h-20 flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-10 w-10 rounded-[10px]">
-              <AvatarImage src={otherParticipant?.avatar_url} />
+              <AvatarImage src={getFileUrl(otherParticipant?.avatar_url)} />
               <AvatarFallback className="rounded-[10px] bg-gray-200">
                 {conversationName[0]?.toUpperCase() || 'U'}
               </AvatarFallback>
@@ -1580,7 +1581,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                     {/* Only show avatar for other person's messages */}
                     {!isOwn && !sameSenderBefore && (
                       <Avatar className="h-10 w-10 flex-shrink-0 rounded-[8.33px]">
-                        <AvatarImage src={msg.sender_id?.avatar_url} />
+                        <AvatarImage src={getFileUrl(msg.sender_id?.avatar_url)} />
                         <AvatarFallback className="rounded-[8.33px] bg-gray-200">
                           {msg.sender_id?.username?.[0]?.toUpperCase() || 'U'}
                         </AvatarFallback>
