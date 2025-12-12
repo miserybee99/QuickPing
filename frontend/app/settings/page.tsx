@@ -122,8 +122,8 @@ export default function SettingsPage() {
     <PageWrapper>
       <PageHeader
         icon={Settings}
-        title="Cài đặt"
-        subtitle="Quản lý tài khoản và tùy chỉnh trải nghiệm của bạn"
+        title="Settings"
+        subtitle="Manage your account and customize your experience"
         actions={
           <button
             onClick={() => router.push('/')}
