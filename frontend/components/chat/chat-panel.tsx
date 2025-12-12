@@ -1540,15 +1540,15 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
           <div className="absolute inset-0 bg-[#615EF0]/10 flex items-center justify-center z-50 pointer-events-none">
             <div className="bg-white rounded-xl shadow-lg px-8 py-6 text-center">
               <Paperclip className="w-12 h-12 text-[#615EF0] mx-auto mb-2" />
-              <p className="text-lg font-medium text-gray-900">Thả file để tải lên</p>
-              <p className="text-sm text-gray-500">Tối đa {MAX_FILES} files, mỗi file &lt; 5MB</p>
+              <p className="text-lg font-medium text-gray-900">Drop files to upload</p>
+              <p className="text-sm text-gray-500">Max {MAX_FILES} files, each &lt; 5MB</p>
             </div>
           </div>
         )}
         <div className="space-y-8">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-8">
-              Chưa có tin nhắn nào. Bắt đầu cuộc trò chuyện!
+              No messages yet. Start a conversation!
             </div>
           ) : (
             messages.map((msg, index) => {

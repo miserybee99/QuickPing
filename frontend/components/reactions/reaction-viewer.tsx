@@ -61,7 +61,7 @@ export function ReactionViewer({
             <PopoverContent className="w-64 p-3" side="top">
               <p className="text-sm font-semibold mb-2 flex items-center gap-2">
                 <span className="text-xl">{reaction.emoji}</span>
-                <span>{reaction.count} người</span>
+                <span>{reaction.count} {reaction.count === 1 ? 'person' : 'people'}</span>
               </p>
               <ScrollArea className="max-h-48">
                 <div className="space-y-2">

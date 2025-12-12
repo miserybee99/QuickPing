@@ -185,7 +185,7 @@ export const ACCEPTED_FILE_TYPES = {
 // Helper to validate file
 export function validateFile(file: File): { valid: boolean; error?: string } {
   if (file.size > MAX_FILE_SIZE) {
-    return { valid: false, error: `File quá lớn. Tối đa ${formatFileSize(MAX_FILE_SIZE)}` };
+    return { valid: false, error: `File too large. Maximum ${formatFileSize(MAX_FILE_SIZE)}` };
   }
 
   // Check file type
@@ -198,7 +198,7 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
   });
 
   if (!isAccepted) {
-    return { valid: false, error: 'Loại file không được hỗ trợ' };
+    return { valid: false, error: 'File type not supported' };
   }
 
   return { valid: true };

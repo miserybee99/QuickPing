@@ -82,7 +82,7 @@ export default function RegisterPage() {
         router.push('/');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Đăng ký thất bại');
+      setError(err.response?.data?.error || 'Registration failed');
     } finally {
       setLoading(false);
     }

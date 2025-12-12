@@ -50,7 +50,7 @@ function AuthCallbackContent() {
           console.log('✅ User data saved:', user.email);
 
           setStatus('success');
-          setMessage('Đăng nhập thành công! Đang chuyển hướng...');
+          setMessage('Login successful! Redirecting...');
 
           // Use window.location for hard redirect
           setTimeout(() => {

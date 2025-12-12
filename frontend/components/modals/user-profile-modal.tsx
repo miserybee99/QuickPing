@@ -60,7 +60,7 @@ export function UserProfileModal({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-background rounded-lg shadow-2xl w-full max-w-md overflow-hidden"
             >
-              {/* Header với gradient background */}
+              {/* Header with gradient background */}
               <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-500 relative">
                 <Button
                   size="icon"

@@ -83,7 +83,7 @@ function LoginContent() {
         return;
       }
       
-      const errorMessage = errorData?.error || errorData?.message || 'Đăng nhập thất bại';
+      const errorMessage = errorData?.error || errorData?.message || 'Login failed';
       setError(errorMessage);
     } finally {
       setLoading(false);

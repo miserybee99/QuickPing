@@ -207,7 +207,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
       window.location.href = '/groups';
     } catch (error: any) {
       console.error('Error leaving group:', error);
-      alert(error?.response?.data?.error || 'Không thể rời khỏi nhóm. Vui lòng thử lại.');
+      alert(error?.response?.data?.error || 'Could not leave group. Please try again.');
     }
   };
 
@@ -262,7 +262,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
               <button
                 onClick={() => setAddMembersOpen(true)}
                 className="w-8 h-8 flex items-center justify-center bg-[#615EF0]/10 hover:bg-[#615EF0]/20 rounded-full transition-colors"
-                title="Thêm thành viên"
+                title="Add members"
               >
                 <UserPlus className="w-4 h-4 text-[#615EF0]" />
               </button>
@@ -422,7 +422,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
             onClick={handleLeaveGroup}
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Rời khỏi nhóm
+            Leave Group
           </Button>
         </div>
       )}
