@@ -2,23 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, User as UserIcon, Loader2, ArrowLeft } from 'lucide-react';
+import { Save, User as UserIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/useUser';
 import { apiClient } from '@/lib/api-client';
 import { AvatarUploadDropzone } from '@/components/profile/avatar-upload-dropzone';
+import { PageHeader } from '@/components/layout';
+import { PageContainer, PageWrapper } from '@/components/layout';
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const { user, refetch } = useUser();
+  const { user } = useUser();
   const [saving, setSaving] = useState(false);
 
   // Profile state
@@ -57,11 +56,6 @@ export default function ProfilePage() {
         const updatedUser = { ...user, avatar_url: url };
         localStorage.setItem('user', JSON.stringify(updatedUser));
       }
-      
-      // Refetch user data
-      if (refetch) {
-        refetch();
-      }
     } catch (error) {
       console.error('Error updating avatar:', error);
       // Revert on error
@@ -84,11 +78,6 @@ export default function ProfilePage() {
         localStorage.setItem('user', JSON.stringify(updatedUser));
       }
       
-      // Refetch user data
-      if (refetch) {
-        refetch();
-      }
-      
       alert('Cập nhật profile thành công!');
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -99,47 +88,30 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.back()}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <UserIcon className="h-6 w-6" />
-                  Hồ sơ cá nhân
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Quản lý thông tin cá nhân của bạn
-                </p>
-              </div>
-            </div>
-            <Button onClick={handleSaveProfile} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Đang lưu...
-                </>
-              ) : (
-                <>
-              <Save className="h-4 w-4 mr-2" />
-                  Lưu thay đổi
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
+    <PageWrapper>
+      <PageHeader
+        icon={UserIcon}
+        title="Hồ sơ cá nhân"
+        subtitle="Quản lý thông tin cá nhân của bạn"
+        showBackButton
+        actions={
+          <Button onClick={handleSaveProfile} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Đang lưu...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Lưu thay đổi
+              </>
+            )}
+          </Button>
+        }
+      />
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <PageContainer maxWidth="lg">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -274,7 +246,7 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
             </motion.div>
-      </div>
-    </div>
+      </PageContainer>
+    </PageWrapper>
   );
 }

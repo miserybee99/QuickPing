@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, UserMinus, Check, X, Search, UserX, Loader2 } from 'lucide-react';
+import { UserCheck, UserPlus, UserMinus, Check, X, Search, UserX, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,6 +13,8 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { User } from '@/types';
 import { useUserStatus } from '@/contexts/UserStatusContext';
+import { PageHeader } from '@/components/layout';
+import { PageContainer, PageWrapper } from '@/components/layout';
 
 interface FriendRequest {
   _id: string;
@@ -108,40 +110,30 @@ export default function FriendsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <PageWrapper>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </PageWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.back()}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Users className="h-6 w-6" />
-                Bạn bè
-              </h1>
-            </div>
-            <Button onClick={() => router.push('/search')}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Thêm bạn bè
-            </Button>
-          </div>
-        </div>
-      </div>
+    <PageWrapper>
+      <PageHeader
+        icon={UserCheck}
+        title="Bạn bè"
+        subtitle={`${friends.length} bạn bè • ${requests.length} lời mời đang chờ`}
+        showBackButton
+        actions={
+          <Button onClick={() => router.push('/search')}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Thêm bạn bè
+          </Button>
+        }
+      />
 
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer maxWidth="2xl">
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-[500px]">
             <TabsTrigger value="all">
@@ -361,8 +353,8 @@ export default function FriendsPage() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+      </PageContainer>
+    </PageWrapper>
   );
 }
 

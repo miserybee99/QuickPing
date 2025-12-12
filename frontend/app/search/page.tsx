@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Users, X, Filter, UserPlus, Loader2 } from 'lucide-react';
+import { Search, Users, Filter, UserPlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,6 +21,8 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { apiClient } from '@/lib/api-client';
 import { User } from '@/types';
 import { useUserStatus } from '@/contexts/UserStatusContext';
+import { PageHeader } from '@/components/layout';
+import { PageContainer, PageWrapper } from '@/components/layout';
 
 export default function SearchPage() {
   const router = useRouter();
@@ -81,49 +83,41 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
+    <PageWrapper>
+      <PageHeader
+        icon={Search}
+        title="Tìm kiếm"
+        subtitle="Tìm người dùng theo username, email hoặc MSSV"
+        showBackButton
+        actions={
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.back()}
-            >
-              <X className="h-5 w-5" />
-            </Button>
-
-            <div className="flex-1 flex items-center gap-4">
-              <div className="relative flex-1 max-w-2xl">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  placeholder="Tìm kiếm người dùng, nhóm, tin nhắn..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="pl-10 h-12 text-base"
-                  autoFocus
-                />
-              </div>
-
-              <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="users">Người dùng</SelectItem>
-                  <SelectItem value="groups">Nhóm</SelectItem>
-                  <SelectItem value="messages">Tin nhắn</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="relative w-80">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Tìm kiếm..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="pl-10"
+                autoFocus
+              />
             </div>
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-[140px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="users">Người dùng</SelectItem>
+                <SelectItem value="groups">Nhóm</SelectItem>
+                <SelectItem value="messages">Tin nhắn</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer maxWidth="2xl">
         {query.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -229,8 +223,8 @@ export default function SearchPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </PageContainer>
+    </PageWrapper>
   );
 }
 

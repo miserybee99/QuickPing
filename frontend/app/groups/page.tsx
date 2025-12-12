@@ -13,6 +13,8 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { Conversation } from '@/types';
 import { AddMembersModal } from '@/components/modals/add-members-modal';
+import { PageHeader } from '@/components/layout';
+import { PageContainer, PageWrapper } from '@/components/layout';
 
 export default function GroupsPage() {
   const router = useRouter();
@@ -68,31 +70,29 @@ export default function GroupsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <PageWrapper>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </PageWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Users className="h-6 w-6" />
-              Nhóm của tôi
-            </h1>
-            <Button onClick={() => router.push('/groups/create')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Tạo nhóm mới
-            </Button>
-          </div>
-        </div>
-      </div>
+    <PageWrapper>
+      <PageHeader
+        icon={Users}
+        title="Nhóm của tôi"
+        subtitle={`${groups.length} nhóm`}
+        actions={
+          <Button onClick={() => router.push('/groups/create')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Tạo nhóm mới
+          </Button>
+        }
+      />
 
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer maxWidth="2xl">
         {/* Search */}
         <div className="mb-6">
           <div className="relative max-w-xl">
@@ -285,19 +285,19 @@ export default function GroupsPage() {
             </div>
           </ScrollArea>
         )}
-      </div>
 
-      {/* Add Members Modal */}
-      {selectedGroup && (
-        <AddMembersModal
-          open={addMembersOpen}
-          onOpenChange={setAddMembersOpen}
-          conversationId={selectedGroup._id}
-          currentMembers={selectedGroup.participants.map((p) => p.user_id._id)}
-          onMembersAdded={handleMembersAdded}
-        />
-      )}
-    </div>
+        {/* Add Members Modal */}
+        {selectedGroup && (
+          <AddMembersModal
+            open={addMembersOpen}
+            onOpenChange={setAddMembersOpen}
+            conversationId={selectedGroup._id}
+            currentMembers={selectedGroup.participants.map((p) => p.user_id._id)}
+            onMembersAdded={handleMembersAdded}
+          />
+        )}
+      </PageContainer>
+    </PageWrapper>
   );
 }
 

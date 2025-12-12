@@ -9,10 +9,12 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Moon, Sun, Type, Bell, Lock, User as UserIcon, X, Monitor, BellRing, BellOff } from 'lucide-react';
+import { Moon, Sun, Type, Bell, Lock, User as UserIcon, X, Monitor, BellRing, BellOff, Settings } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useUser } from '@/hooks/useUser';
 import { useTheme } from '@/contexts/ThemeContext';
+import { PageHeader } from '@/components/layout';
+import { PageWrapper } from '@/components/layout';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -117,29 +119,27 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <ScrollArea className="flex-1">
-        <div className="container max-w-4xl mx-auto py-8 px-4">
-          {/* Header with Close Button */}
-          <div className="mb-8 flex items-start justify-between">
-            <div className="flex-1">
-            <h1 className="text-3xl font-bold">Settings</h1>
-            <p className="text-gray-600 mt-2">Quản lý tài khoản và tùy chỉnh trải nghiệm của bạn</p>
+    <PageWrapper>
+      <PageHeader
+        icon={Settings}
+        title="Cài đặt"
+        subtitle="Quản lý tài khoản và tùy chỉnh trải nghiệm của bạn"
+        actions={
+          <button
+            onClick={() => router.push('/')}
+            className="flex flex-col items-center gap-1.5 group"
+            aria-label="Close settings"
+          >
+            <div className="w-10 h-10 rounded-full bg-muted border-2 border-border flex items-center justify-center hover:border-muted-foreground transition-colors">
+              <X className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
             </div>
-            
-            {/* Close Button - ESC Style */}
-            <button
-              onClick={() => router.push('/')}
-              className="flex flex-col items-center gap-2 group flex-shrink-0"
-              aria-label="Close settings"
-            >
-              <div className="w-12 h-12 rounded-full bg-[#2B2D31] border-2 border-gray-600 flex items-center justify-center hover:border-gray-400 transition-colors">
-                <X className="w-5 h-5 text-gray-400 group-hover:text-gray-200 transition-colors" />
-              </div>
-              <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">ESC</span>
-            </button>
-          </div>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">ESC</span>
+          </button>
+        }
+      />
 
+      <ScrollArea className="flex-1">
+        <div className="container max-w-4xl mx-auto py-6 px-4 sm:px-6">
           <Tabs defaultValue="appearance" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="appearance">Giao diện</TabsTrigger>
@@ -771,7 +771,7 @@ export default function SettingsPage() {
       </Tabs>
         </div>
       </ScrollArea>
-    </div>
+    </PageWrapper>
   );
 }
 
