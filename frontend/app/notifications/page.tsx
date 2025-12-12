@@ -2,15 +2,16 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Check, Trash2, UserPlus, MessageSquare, Users, X } from 'lucide-react';
+import { Bell, Check, Trash2, UserPlus, MessageSquare, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import vi from 'date-fns/locale/vi';
+import { enUS } from 'date-fns/locale';
+import { PageHeader } from '@/components/layout';
+import { PageContainer, PageWrapper } from '@/components/layout';
 
 interface Notification {
   _id: string;
@@ -30,8 +31,8 @@ const mockNotifications: Notification[] = [
   {
     _id: '1',
     type: 'friend_request',
-    title: 'Lời mời kết bạn',
-    message: 'nguyenvana đã gửi lời mời kết bạn',
+    title: 'Friend Request',
+    message: 'nguyenvana sent you a friend request',
     is_read: false,
     created_at: new Date(Date.now() - 1000 * 60 * 5),
     data: { user: { _id: '1', username: 'nguyenvana', avatar_url: '' } },
@@ -39,8 +40,8 @@ const mockNotifications: Notification[] = [
   {
     _id: '2',
     type: 'message',
-    title: 'Tin nhắn mới',
-    message: 'tranthib đã gửi tin nhắn cho bạn',
+    title: 'New Message',
+    message: 'tranthib sent you a message',
     is_read: false,
     created_at: new Date(Date.now() - 1000 * 60 * 30),
     data: { user: { _id: '2', username: 'tranthib', avatar_url: '' }, conversation_id: 'conv1' },
@@ -48,15 +49,14 @@ const mockNotifications: Notification[] = [
   {
     _id: '3',
     type: 'group_invite',
-    title: 'Lời mời vào nhóm',
-    message: 'Bạn đã được mời vào nhóm "Nhóm học tập"',
+    title: 'Group Invite',
+    message: 'You have been invited to join "Study Group"',
     is_read: true,
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 2),
   },
 ];
 
 export default function NotificationsPage() {
-  const router = useRouter();
   const [notifications, setNotifications] = useState(mockNotifications);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
@@ -106,48 +106,33 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.back()}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Bell className="h-6 w-6" />
-                Thông báo
-                {unreadCount > 0 && (
-                  <Badge variant="destructive">{unreadCount}</Badge>
-                )}
-              </h1>
-            </div>
-            {unreadCount > 0 && (
-              <Button variant="outline" onClick={handleMarkAllAsRead}>
-                <Check className="h-4 w-4 mr-2" />
-                Đánh dấu tất cả đã đọc
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+    <PageWrapper>
+      <PageHeader
+        icon={Bell}
+        title="Notifications"
+        subtitle={unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
+        showBackButton
+        actions={
+          unreadCount > 0 ? (
+            <Button variant="outline" onClick={handleMarkAllAsRead}>
+              <Check className="h-4 w-4 mr-2" />
+              Mark all as read
+            </Button>
+          ) : null
+        }
+      />
 
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer maxWidth="2xl">
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList>
             <TabsTrigger value="all">
-              Tất cả
+              All
               <Badge variant="secondary" className="ml-2">
                 {notifications.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="unread">
-              Chưa đọc
+              Unread
               <Badge variant="secondary" className="ml-2">
                 {unreadCount}
               </Badge>
@@ -193,13 +178,13 @@ export default function NotificationsPage() {
                             <p className="text-xs text-muted-foreground mt-1">
                               {formatDistanceToNow(notification.created_at, {
                                 addSuffix: true,
-                                locale: vi,
+                                locale: enUS,
                               })}
                             </p>
                           </div>
                           {!notification.is_read && (
                             <Badge variant="destructive" className="ml-2">
-                              Mới
+                              New
                             </Badge>
                           )}
                         </div>
@@ -269,7 +254,7 @@ export default function NotificationsPage() {
                           <p className="text-xs text-muted-foreground mt-1">
                             {formatDistanceToNow(notification.created_at, {
                               addSuffix: true,
-                              locale: vi,
+                              locale: enUS,
                             })}
                           </p>
                         </div>
@@ -299,8 +284,8 @@ export default function NotificationsPage() {
             </ScrollArea>
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+      </PageContainer>
+    </PageWrapper>
   );
 }
 

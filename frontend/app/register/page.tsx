@@ -49,12 +49,12 @@ export default function RegisterPage() {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Mật khẩu không khớp');
+      setError('Passwords do not match');
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      setError('Password must be at least 6 characters');
       return;
     }
 
@@ -112,7 +112,7 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 <CardTitle className="text-3xl font-bold">QuickPing</CardTitle>
                 <CardDescription className="text-base">
-                  Tạo tài khoản để bắt đầu
+                  Create an account to get started
                 </CardDescription>
               </div>
             </CardHeader>
@@ -151,7 +151,7 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-base font-medium">
-                  Tên người dùng
+                  Username
                 </Label>
                 <div className="relative w-full">
                   <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
@@ -162,7 +162,7 @@ export default function RegisterPage() {
                     onChange={(e) => handleChange('username', e.target.value)}
                     required
                     minLength={3}
-                    placeholder="Tên hiển thị"
+                    placeholder="Display name"
                     className="w-full pl-11 pr-4 h-12 text-base"
                   />
                 </div>
@@ -170,7 +170,7 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="mssv" className="text-base font-medium">
-                  MSSV <span className="text-muted-foreground text-sm">(tùy chọn)</span>
+                  Student ID <span className="text-muted-foreground text-sm">(optional)</span>
                 </Label>
                 <div className="relative w-full">
                   <IdCard className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
@@ -179,7 +179,7 @@ export default function RegisterPage() {
                     type="text"
                     value={formData.mssv}
                     onChange={(e) => handleChange('mssv', e.target.value)}
-                    placeholder="Mã số sinh viên"
+                    placeholder="Student ID number"
                     className="w-full pl-11 pr-4 h-12 text-base"
                   />
                 </div>
@@ -187,7 +187,7 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-base font-medium">
-                  Mật khẩu
+                  Password
                 </Label>
                 <div className="relative w-full">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
@@ -203,13 +203,13 @@ export default function RegisterPage() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Tối thiểu 6 ký tự
+                  Minimum 6 characters
                 </p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-base font-medium">
-                  Xác nhận mật khẩu
+                  Confirm Password
                 </Label>
                 <div className="relative w-full">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
@@ -234,10 +234,10 @@ export default function RegisterPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Đang đăng ký...
+                    Creating account...
                   </>
                 ) : (
-                  'Đăng Ký'
+                  'Sign Up'
                 )}
               </Button>
             </form>
@@ -248,7 +248,7 @@ export default function RegisterPage() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="bg-card px-3 text-muted-foreground uppercase tracking-wide">
-                  Hoặc đăng ký với
+                  Or sign up with
                 </span>
               </div>
             </div>
@@ -264,7 +264,7 @@ export default function RegisterPage() {
               {googleLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Đang kết nối...
+                  Connecting...
                 </>
               ) : (
                 <>
@@ -274,31 +274,31 @@ export default function RegisterPage() {
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                   </svg>
-                  Đăng ký với Google
+                  Sign up with Google
                 </>
               )}
             </Button>
 
             <div className="text-center text-base pt-4">
-              <span className="text-muted-foreground">Đã có tài khoản? </span>
+              <span className="text-muted-foreground">Already have an account? </span>
               <Link 
                 href="/login" 
                 className="text-primary font-semibold hover:underline transition-colors"
               >
-                Đăng nhập
+                Sign in
               </Link>
             </div>
             </CardContent>
           </Card>
 
           <p className="text-center text-sm text-muted-foreground mt-8 px-4">
-            Bằng việc đăng ký, bạn đồng ý với{' '}
+            By signing up, you agree to our{' '}
             <a href="#" className="underline hover:text-primary font-medium transition-colors">
-              Điều khoản dịch vụ
+              Terms of Service
             </a>
-            {' '}và{' '}
+            {' '}and{' '}
             <a href="#" className="underline hover:text-primary font-medium transition-colors">
-              Chính sách bảo mật
+              Privacy Policy
             </a>
           </p>
         </motion.div>

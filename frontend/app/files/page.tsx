@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Image, Film, Download, Trash2, Search, Filter, X } from 'lucide-react';
+import { FileText, Image, Film, Download, Trash2, Search, Filter, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,9 +10,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import vi from 'date-fns/locale/vi';
+import { enUS } from 'date-fns/locale';
+import { PageHeader } from '@/components/layout';
+import { PageContainer, PageWrapper } from '@/components/layout';
 
 interface FileItem {
   _id: string;
@@ -34,7 +35,7 @@ const mockFiles: FileItem[] = [
     size: 2500000,
     url: '',
     uploader: { _id: '1', username: 'nguyenvana' },
-    conversation: { _id: '1', name: 'Nhóm học tập' },
+    conversation: { _id: '1', name: 'Study Group' },
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 2),
   },
   {
@@ -50,7 +51,6 @@ const mockFiles: FileItem[] = [
 ];
 
 export default function FilesPage() {
-  const router = useRouter();
   const [files] = useState(mockFiles);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -79,49 +79,44 @@ export default function FilesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                <X className="h-5 w-5" />
-              </Button>
-              <h1 className="text-2xl font-bold">Thư viện file</h1>
+    <PageWrapper>
+      <PageHeader
+        icon={FolderOpen}
+        title="File Library"
+        subtitle={`${files.length} files`}
+        showBackButton
+        actions={
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search files..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 w-[250px]"
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Tìm file..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-[300px]"
-                />
-              </div>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-[150px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="images">Hình ảnh</SelectItem>
-                  <SelectItem value="videos">Video</SelectItem>
-                  <SelectItem value="documents">Tài liệu</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-[140px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="images">Images</SelectItem>
+                <SelectItem value="videos">Videos</SelectItem>
+                <SelectItem value="documents">Documents</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer maxWidth="2xl">
         <Tabs defaultValue="grid" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="grid">Lưới</TabsTrigger>
-            <TabsTrigger value="list">Danh sách</TabsTrigger>
+            <TabsTrigger value="grid">Grid</TabsTrigger>
+            <TabsTrigger value="list">List</TabsTrigger>
           </TabsList>
 
           {/* Grid View */}
@@ -205,7 +200,7 @@ export default function FilesPage() {
                                 <span>
                                   {formatDistanceToNow(file.created_at, {
                                     addSuffix: true,
-                                    locale: vi,
+                                    locale: enUS,
                                   })}
                                 </span>
                               </div>
@@ -216,7 +211,7 @@ export default function FilesPage() {
                             <div className="flex gap-2">
                               <Button size="sm" variant="outline">
                                 <Download className="h-4 w-4 mr-2" />
-                                Tải
+                                Download
                               </Button>
                               <Button size="sm" variant="ghost" className="text-destructive">
                                 <Trash2 className="h-4 w-4" />
@@ -232,8 +227,8 @@ export default function FilesPage() {
             </ScrollArea>
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+      </PageContainer>
+    </PageWrapper>
   );
 }
 

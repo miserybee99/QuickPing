@@ -26,10 +26,10 @@ function LoginContent() {
     const oauthError = searchParams.get('error');
     if (oauthError) {
       const errorMessages: Record<string, string> = {
-        'google_auth_failed': 'Đăng nhập Google thất bại. Vui lòng thử lại.',
-        'server_error': 'Có lỗi xảy ra. Vui lòng thử lại sau.',
+        'google_auth_failed': 'Google login failed. Please try again.',
+        'server_error': 'An error occurred. Please try again later.',
       };
-      setError(errorMessages[oauthError] || 'Đăng nhập thất bại. Vui lòng thử lại.');
+      setError(errorMessages[oauthError] || 'Login failed. Please try again.');
     }
   }, [searchParams]);
 
@@ -114,7 +114,7 @@ function LoginContent() {
               <div className="space-y-2">
                 <CardTitle className="text-3xl font-bold">QuickPing</CardTitle>
                 <CardDescription className="text-base">
-                  Đăng nhập để bắt đầu trò chuyện
+                  Sign in to start chatting
                 </CardDescription>
               </div>
             </CardHeader>
@@ -154,10 +154,10 @@ function LoginContent() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-base font-medium">
-                    Mật khẩu
+                    Password
                   </Label>
                   <a href="#" className="text-sm text-primary hover:underline">
-                    Quên mật khẩu?
+                    Forgot password?
                   </a>
                 </div>
                 <div className="relative w-full">
@@ -183,10 +183,10 @@ function LoginContent() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Đang đăng nhập...
+                    Signing in...
                   </>
                 ) : (
-                  'Đăng Nhập'
+                  'Sign In'
                 )}
               </Button>
             </form>
@@ -197,7 +197,7 @@ function LoginContent() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="bg-card px-3 text-muted-foreground uppercase tracking-wide">
-                  Hoặc tiếp tục với
+                  Or continue with
                 </span>
               </div>
             </div>
@@ -213,7 +213,7 @@ function LoginContent() {
               {googleLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Đang kết nối...
+                  Connecting...
                 </>
               ) : (
                 <>
@@ -223,31 +223,31 @@ function LoginContent() {
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                   </svg>
-                  Đăng nhập với Google
+                  Sign in with Google
                 </>
               )}
             </Button>
 
             <div className="text-center text-base pt-4">
-              <span className="text-muted-foreground">Chưa có tài khoản? </span>
+              <span className="text-muted-foreground">Don't have an account? </span>
               <Link 
                 href="/register" 
                 className="text-primary font-semibold hover:underline transition-colors"
               >
-                Đăng ký ngay
+                Sign up
               </Link>
             </div>
             </CardContent>
           </Card>
 
           <p className="text-center text-sm text-muted-foreground mt-8 px-4">
-            Bằng việc đăng nhập, bạn đồng ý với{' '}
+            By signing in, you agree to our{' '}
             <a href="#" className="underline hover:text-primary font-medium transition-colors">
-              Điều khoản dịch vụ
+              Terms of Service
             </a>
-            {' '}và{' '}
+            {' '}and{' '}
             <a href="#" className="underline hover:text-primary font-medium transition-colors">
-              Chính sách bảo mật
+              Privacy Policy
             </a>
           </p>
         </motion.div>
