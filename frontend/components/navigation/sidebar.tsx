@@ -19,15 +19,15 @@ import { useUser } from '@/hooks/useUser';
 
 // Main navigation items
 const mainNavigation = [
-  { name: 'Tin nhắn', href: '/', icon: MessageSquare },
-  { name: 'Nhóm', href: '/groups', icon: Users },
-  { name: 'Bạn bè', href: '/friends', icon: UserCheck },
-  { name: 'Tìm kiếm', href: '/search', icon: Search },
+  { name: 'Messages', href: '/', icon: MessageSquare },
+  { name: 'Groups', href: '/groups', icon: Users },
+  { name: 'Friends', href: '/friends', icon: UserCheck },
+  { name: 'Search', href: '/search', icon: Search },
 ];
 
 // Secondary navigation items
 const secondaryNavigation = [
-  { name: 'Thông báo', href: '/notifications', icon: Bell },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Files', href: '/files', icon: FolderOpen },
 ];
 
@@ -128,7 +128,7 @@ export function Sidebar() {
       <div className="flex flex-col items-center gap-2">
         {/* Settings */}
         <NavItem 
-          item={{ name: 'Cài đặt', href: '/settings', icon: Settings }}
+          item={{ name: 'Settings', href: '/settings', icon: Settings }}
           isActive={isActive('/settings')}
         />
 
@@ -141,7 +141,7 @@ export function Sidebar() {
               ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
               : 'hover:ring-2 hover:ring-muted hover:ring-offset-2 hover:ring-offset-background'
           )}
-          title="Hồ sơ"
+          title="Profile"
         >
           <Avatar className="w-9 h-9">
             <AvatarImage src={user?.avatar_url} alt={user?.username} />
@@ -157,7 +157,7 @@ export function Sidebar() {
           
           {/* Tooltip */}
           <span className="absolute left-full ml-4 px-3 py-2 bg-popover text-popover-foreground text-sm font-medium rounded-lg shadow-lg border border-border opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity duration-200">
-            Hồ sơ
+            Profile
           </span>
         </Link>
       </div>

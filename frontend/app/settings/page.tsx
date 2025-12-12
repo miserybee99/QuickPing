@@ -83,7 +83,7 @@ export default function SettingsPage() {
         setNotifications(prev => ({ ...prev, desktop: true }));
         // Show a test notification
         new Notification('QuickPing', {
-          body: 'Thông báo đã được bật thành công!',
+          body: 'Notifications enabled successfully!',
           icon: '/logo.png',
         });
       }
@@ -104,7 +104,7 @@ export default function SettingsPage() {
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Error saving preferences:', error);
-      alert('Không thể lưu settings. Vui lòng thử lại.');
+      alert('Could not save settings. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -142,10 +142,10 @@ export default function SettingsPage() {
         <div className="container max-w-4xl mx-auto py-6 px-4 sm:px-6">
           <Tabs defaultValue="appearance" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="appearance">Giao diện</TabsTrigger>
-          <TabsTrigger value="notifications">Thông báo</TabsTrigger>
-          <TabsTrigger value="privacy">Quyền riêng tư</TabsTrigger>
-          <TabsTrigger value="account">Tài khoản</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="privacy">Privacy</TabsTrigger>
+          <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
 
         {/* ====================================================================== */}
@@ -159,7 +159,7 @@ export default function SettingsPage() {
                 Theme
               </CardTitle>
               <CardDescription>
-                Chọn giao diện sáng, tối hoặc theo hệ thống
+                Choose light, dark, or system theme
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -174,7 +174,7 @@ export default function SettingsPage() {
                   onClick={() => setTheme('light')}
                 >
                   <Sun className={`w-6 h-6 ${theme === 'light' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm font-medium ${theme === 'light' ? 'text-primary' : ''}`}>Sáng</span>
+                  <span className={`text-sm font-medium ${theme === 'light' ? 'text-primary' : ''}`}>Light</span>
                 </div>
                 
                 <div
@@ -186,7 +186,7 @@ export default function SettingsPage() {
                   onClick={() => setTheme('dark')}
                 >
                   <Moon className={`w-6 h-6 ${theme === 'dark' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-primary' : ''}`}>Tối</span>
+                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-primary' : ''}`}>Dark</span>
                 </div>
                 
                 <div
@@ -198,14 +198,14 @@ export default function SettingsPage() {
                   onClick={() => setTheme('system')}
                 >
                   <Monitor className={`w-6 h-6 ${theme === 'system' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm font-medium ${theme === 'system' ? 'text-primary' : ''}`}>Hệ thống</span>
+                  <span className={`text-sm font-medium ${theme === 'system' ? 'text-primary' : ''}`}>System</span>
                 </div>
               </div>
               
               {theme === 'system' && (
                 <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                  Giao diện sẽ tự động thay đổi theo cài đặt hệ thống của bạn.
-                  Hiện tại đang sử dụng chế độ {resolvedTheme === 'dark' ? 'tối' : 'sáng'}.
+                  Theme will automatically change based on your system settings.
+                  Currently using {resolvedTheme === 'dark' ? 'dark' : 'light'} mode.
                 </p>
               )}
             </CardContent>
@@ -218,7 +218,7 @@ export default function SettingsPage() {
                 Font Size
               </CardTitle>
               <CardDescription>
-                Điều chỉnh kích thước chữ trong ứng dụng
+                Adjust font size in the application
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -232,7 +232,7 @@ export default function SettingsPage() {
                   }`}
                   onClick={() => setFontSize('small')}
                 >
-                  <span className="text-sm">Nhỏ (14px)</span>
+                  <span className="text-sm">Small (14px)</span>
                   <div className={`w-4 h-4 rounded-full border-2 ${
                     fontSize === 'small' ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
                   }`}></div>
@@ -246,7 +246,7 @@ export default function SettingsPage() {
                   }`}
                   onClick={() => setFontSize('medium')}
                 >
-                  <span className="text-base">Trung bình (16px)</span>
+                  <span className="text-base">Medium (16px)</span>
                   <div className={`w-4 h-4 rounded-full border-2 ${
                     fontSize === 'medium' ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
                   }`}></div>
@@ -260,7 +260,7 @@ export default function SettingsPage() {
                   }`}
                   onClick={() => setFontSize('large')}
                 >
-                  <span className="text-lg">Lớn (18px)</span>
+                  <span className="text-lg">Large (18px)</span>
                   <div className={`w-4 h-4 rounded-full border-2 ${
                     fontSize === 'large' ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
                   }`}></div>
@@ -274,7 +274,7 @@ export default function SettingsPage() {
                   The quick brown fox jumps over the lazy dog
                 </p>
                 <p className="text-gray-600">
-                  Đây là đoạn text mẫu để xem preview font size
+                  This is a sample text to preview font size
                 </p>
               </div>
             </CardContent>
@@ -292,7 +292,7 @@ export default function SettingsPage() {
               Reset
             </Button>
             <Button onClick={handleSavePreferences} disabled={saving}>
-              {saving ? 'Đang lưu...' : saveSuccess ? '✓ Đã lưu' : 'Lưu thay đổi'}
+              {saving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}
             </Button>
           </div>
         </TabsContent>
@@ -306,10 +306,10 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BellRing className="w-5 h-5" />
-                Thông báo Desktop
+                Desktop Notifications
               </CardTitle>
               <CardDescription>
-                Nhận thông báo ngay cả khi không mở ứng dụng
+                Receive notifications even when the app is not open
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -320,8 +320,8 @@ export default function SettingsPage() {
                       <Bell className="w-5 h-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                      <p className="font-medium text-green-700 dark:text-green-300">Thông báo đã được bật</p>
-                      <p className="text-sm text-green-600 dark:text-green-400">Bạn sẽ nhận được thông báo từ QuickPing</p>
+                      <p className="font-medium text-green-700 dark:text-green-300">Notifications enabled</p>
+                      <p className="text-sm text-green-600 dark:text-green-400">You will receive notifications from QuickPing</p>
                     </div>
                   </div>
                   <Switch
@@ -338,9 +338,9 @@ export default function SettingsPage() {
                       <BellOff className="w-5 h-5 text-red-600 dark:text-red-400" />
                     </div>
                     <div>
-                      <p className="font-medium text-red-700 dark:text-red-300">Thông báo đã bị chặn</p>
+                      <p className="font-medium text-red-700 dark:text-red-300">Notifications blocked</p>
                       <p className="text-sm text-red-600 dark:text-red-400">
-                        Vui lòng bật thông báo trong cài đặt trình duyệt của bạn
+                        Please enable notifications in your browser settings
                       </p>
                     </div>
                   </div>
@@ -353,14 +353,14 @@ export default function SettingsPage() {
                         <Bell className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">Bật thông báo Desktop</p>
+                        <p className="font-medium">Enable Desktop Notifications</p>
                         <p className="text-sm text-muted-foreground">
-                          Nhận thông báo ngay cả khi không mở tab QuickPing
+                          Receive notifications even when QuickPing tab is not open
                         </p>
                       </div>
                     </div>
                     <Button onClick={requestNotificationPermission}>
-                      Bật ngay
+                      Enable
                     </Button>
                   </div>
                 </div>
@@ -373,10 +373,10 @@ export default function SettingsPage() {
                   <BellOff className={`w-5 h-5 ${notifications.doNotDisturb ? 'text-orange-500' : 'text-muted-foreground'}`} />
                   <div>
                     <Label htmlFor="dnd-toggle" className="font-medium">
-                      Không làm phiền
+                      Do Not Disturb
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Tắt tất cả thông báo tạm thời
+                      Temporarily disable all notifications
                     </p>
                   </div>
                 </div>
@@ -390,7 +390,7 @@ export default function SettingsPage() {
               </div>
               {notifications.doNotDisturb && (
                 <p className="text-sm text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 p-3 rounded-lg">
-                  🔕 Chế độ không làm phiền đang bật. Bạn sẽ không nhận được bất kỳ thông báo nào.
+                  🔕 Do Not Disturb mode is on. You won't receive any notifications.
                 </p>
               )}
             </CardContent>
@@ -401,10 +401,10 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
-                Loại thông báo
+                Notification Types
               </CardTitle>
               <CardDescription>
-                Chọn các loại thông báo bạn muốn nhận
+                Choose which notifications you want to receive
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -412,10 +412,10 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="notif-messages" className="font-medium">
-                      Tin nhắn mới
+                      New Messages
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Nhận thông báo khi có tin nhắn mới
+                      Get notified when you receive new messages
                     </p>
                   </div>
                   <Switch
@@ -432,10 +432,10 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="notif-friends" className="font-medium">
-                      Lời mời kết bạn
+                      Friend Requests
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Nhận thông báo khi có lời mời kết bạn
+                      Get notified when you receive friend requests
                     </p>
                   </div>
                   <Switch
@@ -452,10 +452,10 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="notif-groups" className="font-medium">
-                      Lời mời vào nhóm
+                      Group Invites
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Nhận thông báo khi được mời vào nhóm
+                      Get notified when you're invited to a group
                     </p>
                   </div>
                   <Switch
@@ -472,10 +472,10 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="notif-mentions" className="font-medium">
-                      Được nhắc đến
+                      Mentions
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Nhận thông báo khi ai đó nhắc đến bạn
+                      Get notified when someone mentions you
                     </p>
                   </div>
                   <Switch
@@ -492,10 +492,10 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="notif-sound" className="font-medium">
-                      Âm thanh thông báo
+                      Notification Sound
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Phát âm thanh khi có thông báo mới
+                      Play sound when receiving notifications
                     </p>
                   </div>
                   <Switch
@@ -513,7 +513,7 @@ export default function SettingsPage() {
           {/* Save Button */}
           <div className="flex justify-end">
             <Button onClick={handleSavePreferences} disabled={saving}>
-              {saving ? 'Đang lưu...' : saveSuccess ? '✓ Đã lưu' : 'Lưu thay đổi'}
+              {saving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}
             </Button>
           </div>
         </TabsContent>
@@ -527,20 +527,20 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Lock className="w-5 h-5" />
-                Trạng thái hoạt động
+                Activity Status
               </CardTitle>
               <CardDescription>
-                Kiểm soát ai có thể thấy trạng thái của bạn
+                Control who can see your status
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="online-status" className="font-medium">
-                    Hiển thị trạng thái online
+                    Show Online Status
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Cho phép người khác thấy khi bạn đang online
+                    Allow others to see when you're online
                   </p>
                 </div>
                 <Switch
@@ -557,10 +557,10 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="read-receipts" className="font-medium">
-                    Xác nhận đã đọc
+                    Read Receipts
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Cho phép người khác thấy khi bạn đã đọc tin nhắn
+                    Allow others to see when you've read messages
                   </p>
                 </div>
                 <Switch
@@ -579,16 +579,16 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Lock className="w-5 h-5" />
-                Quyền liên hệ
+                Contact Permissions
               </CardTitle>
               <CardDescription>
-                Kiểm soát ai có thể liên hệ với bạn
+                Control who can contact you
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
                 <div>
-                  <Label className="font-medium">Ai có thể nhắn tin cho bạn?</Label>
+                  <Label className="font-medium">Who can message you?</Label>
                   <div className="mt-2 space-y-2">
                     <div
                       className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
@@ -605,7 +605,7 @@ export default function SettingsPage() {
                           <div className="w-2 h-2 rounded-full bg-white" />
                         )}
                       </div>
-                      <span className="text-sm">Tất cả mọi người</span>
+                      <span className="text-sm">Everyone</span>
                     </div>
                     <div
                       className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
@@ -622,7 +622,7 @@ export default function SettingsPage() {
                           <div className="w-2 h-2 rounded-full bg-white" />
                         )}
                       </div>
-                      <span className="text-sm">Chỉ bạn bè</span>
+                      <span className="text-sm">Friends Only</span>
                     </div>
                   </div>
                 </div>
@@ -630,7 +630,7 @@ export default function SettingsPage() {
                 <Separator />
 
                 <div>
-                  <Label className="font-medium">Ai có thể thêm bạn vào nhóm?</Label>
+                  <Label className="font-medium">Who can add you to groups?</Label>
                   <div className="mt-2 space-y-2">
                     <div
                       className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
@@ -647,7 +647,7 @@ export default function SettingsPage() {
                           <div className="w-2 h-2 rounded-full bg-white" />
                         )}
                       </div>
-                      <span className="text-sm">Tất cả mọi người</span>
+                      <span className="text-sm">Everyone</span>
                     </div>
                     <div
                       className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
@@ -664,7 +664,7 @@ export default function SettingsPage() {
                           <div className="w-2 h-2 rounded-full bg-white" />
                         )}
                       </div>
-                      <span className="text-sm">Chỉ bạn bè</span>
+                      <span className="text-sm">Friends Only</span>
                     </div>
                     <div
                       className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
@@ -681,7 +681,7 @@ export default function SettingsPage() {
                           <div className="w-2 h-2 rounded-full bg-white" />
                         )}
                       </div>
-                      <span className="text-sm">Không ai</span>
+                      <span className="text-sm">No One</span>
                     </div>
                   </div>
                 </div>
@@ -692,7 +692,7 @@ export default function SettingsPage() {
           {/* Save Button */}
           <div className="flex justify-end">
             <Button onClick={handleSavePreferences} disabled={saving}>
-              {saving ? 'Đang lưu...' : saveSuccess ? '✓ Đã lưu' : 'Lưu thay đổi'}
+              {saving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}
             </Button>
           </div>
         </TabsContent>
@@ -705,10 +705,10 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserIcon className="w-5 h-5" />
-                Tài khoản
+                Account
               </CardTitle>
               <CardDescription>
-                Quản lý tài khoản của bạn
+                Manage your account
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -728,8 +728,8 @@ export default function SettingsPage() {
                 <Separator />
 
                 <div>
-                  <Label className="font-medium">MSSV</Label>
-                  <p className="text-sm text-gray-600 mt-1">{user?.mssv || 'Chưa cập nhật'}</p>
+                  <Label className="font-medium">Student ID</Label>
+                  <p className="text-sm text-gray-600 mt-1">{user?.mssv || 'Not set'}</p>
                 </div>
 
                 <Separator />
@@ -740,7 +740,7 @@ export default function SettingsPage() {
                     className="w-full"
                     onClick={() => router.push('/profile')}
                   >
-                    Chỉnh sửa thông tin
+                    Edit Profile
                   </Button>
                 </div>
 
@@ -752,7 +752,7 @@ export default function SettingsPage() {
                     className="w-full"
                     onClick={handleLogout}
                   >
-                    Đăng xuất
+                    Sign Out
                   </Button>
                 </div>
 
@@ -761,7 +761,7 @@ export default function SettingsPage() {
                     variant="ghost"
                     className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
-                    Xóa tài khoản
+                    Delete Account
                   </Button>
                 </div>
               </div>
