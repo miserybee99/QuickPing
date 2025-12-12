@@ -81,7 +81,7 @@ export default function FriendsPage() {
   };
 
   const handleRemoveFriend = async (userId: string) => {
-    if (!confirm('Bạn có chắc muốn xóa bạn bè này?')) return;
+    if (!confirm('Are you sure you want to remove this friend?')) return;
     
     setActionLoading(userId);
     try {
@@ -122,13 +122,13 @@ export default function FriendsPage() {
     <PageWrapper>
       <PageHeader
         icon={UserCheck}
-        title="Bạn bè"
-        subtitle={`${friends.length} bạn bè • ${requests.length} lời mời đang chờ`}
+        title="Friends"
+        subtitle={`${friends.length} friends • ${requests.length} pending requests`}
         showBackButton
         actions={
           <Button onClick={() => router.push('/search')}>
             <UserPlus className="h-4 w-4 mr-2" />
-            Thêm bạn bè
+            Add Friends
           </Button>
         }
       />
@@ -137,19 +137,19 @@ export default function FriendsPage() {
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-[500px]">
             <TabsTrigger value="all">
-              Tất cả
+              All
               <Badge variant="secondary" className="ml-2">
                 {friends.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="pending">
-              Chờ duyệt
+              Pending
               <Badge variant="secondary" className="ml-2">
                 {requests.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="blocked">
-              Đã chặn
+              Blocked
               <Badge variant="secondary" className="ml-2">
                 {blocked.length}
               </Badge>
@@ -161,7 +161,7 @@ export default function FriendsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Tìm kiếm bạn bè..."
+                placeholder="Search friends..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -172,12 +172,12 @@ export default function FriendsPage() {
               <div className="text-center py-12 text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p className="mb-2">
-                  {friends.length === 0 ? 'Chưa có bạn bè nào' : 'Không tìm thấy kết quả'}
+                  {friends.length === 0 ? 'No friends yet' : 'No results found'}
                 </p>
                 {friends.length === 0 && (
                   <Button variant="outline" onClick={() => router.push('/search')}>
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Tìm bạn bè
+                    Find Friends
                   </Button>
                 )}
               </div>
@@ -221,7 +221,7 @@ export default function FriendsPage() {
                         variant="ghost"
                         onClick={() => router.push(`/chat?user=${friend._id}`)}
                       >
-                        Nhắn tin
+                        Message
                       </Button>
                       <Button
                         size="sm"
@@ -242,13 +242,13 @@ export default function FriendsPage() {
           {/* Pending Requests */}
           <TabsContent value="pending" className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              {requests.length} lời mời kết bạn đang chờ
+              {requests.length} pending friend requests
             </p>
 
             {requests.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Không có lời mời kết bạn nào</p>
+                <p>No pending friend requests</p>
               </div>
             ) : (
             <div className="grid gap-4 md:grid-cols-2">
@@ -303,13 +303,13 @@ export default function FriendsPage() {
           {/* Blocked Users */}
           <TabsContent value="blocked" className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              {blocked.length} người dùng bị chặn
+              {blocked.length} blocked users
             </p>
 
             {blocked.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <UserX className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Không có người dùng nào bị chặn</p>
+                <p>No blocked users</p>
               </div>
             ) : (
             <div className="grid gap-4 md:grid-cols-2">
@@ -345,7 +345,7 @@ export default function FriendsPage() {
                     ) : (
                     <UserX className="h-4 w-4 mr-2" />
                     )}
-                    Bỏ chặn
+                    Unblock
                   </Button>
                 </motion.div>
               ))}

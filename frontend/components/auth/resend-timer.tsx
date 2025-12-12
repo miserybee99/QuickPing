@@ -59,7 +59,7 @@ export function ResendTimer({
   return (
     <div className="flex flex-col items-center gap-2">
       <p className="text-sm text-muted-foreground">
-        Không nhận được mã?
+        Didn't receive the code?
       </p>
       
       {canResend ? (
@@ -73,18 +73,18 @@ export function ResendTimer({
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Đang gửi...
+              Sending...
             </>
           ) : (
             <>
               <RefreshCw className="mr-2 h-4 w-4" />
-              Gửi lại mã
+              Resend Code
             </>
           )}
         </Button>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Gửi lại sau <span className="font-medium text-foreground">{formatTime(seconds)}</span>
+          Resend in <span className="font-medium text-foreground">{formatTime(seconds)}</span>
         </p>
       )}
     </div>

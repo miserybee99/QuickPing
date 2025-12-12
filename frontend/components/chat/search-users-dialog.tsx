@@ -77,9 +77,9 @@ export function SearchUsersDialog({ open, onOpenChange, onSelectUser }: SearchUs
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Tìm người dùng</DialogTitle>
+          <DialogTitle>Find User</DialogTitle>
           <DialogDescription>
-            Tìm kiếm theo tên, email hoặc MSSV
+            Search by name, email or student ID
           </DialogDescription>
         </DialogHeader>
         
@@ -88,7 +88,7 @@ export function SearchUsersDialog({ open, onOpenChange, onSelectUser }: SearchUs
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Nhập tên, email hoặc MSSV..."
+              placeholder="Enter name, email or student ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-9"
@@ -119,13 +119,13 @@ export function SearchUsersDialog({ open, onOpenChange, onSelectUser }: SearchUs
 
             {!loading && searchQuery.length > 0 && searchQuery.length < 2 && (
               <p className="text-sm text-muted-foreground text-center py-8">
-                Nhập ít nhất 2 ký tự để tìm kiếm
+                Enter at least 2 characters to search
               </p>
             )}
 
             {!loading && searchQuery.length >= 2 && users.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-8">
-                Không tìm thấy người dùng
+                No users found
               </p>
             )}
 

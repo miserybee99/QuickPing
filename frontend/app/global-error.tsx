@@ -8,7 +8,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html lang="vi">
+    <html lang="en">
       <body>
         <div style={{
           display: 'flex',
@@ -20,10 +20,10 @@ export default function GlobalError({
           fontFamily: 'system-ui, -apple-system, sans-serif',
         }}>
           <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>
-            Đã xảy ra lỗi!
+            An error occurred!
           </h2>
           <p style={{ color: '#666', marginBottom: '24px' }}>
-            {error.message || 'Có lỗi không mong muốn xảy ra'}
+            {error.message || 'An unexpected error occurred'}
           </p>
           <button
             onClick={() => reset()}
@@ -37,7 +37,7 @@ export default function GlobalError({
               fontSize: '16px',
             }}
           >
-            Thử lại
+            Try again
           </button>
         </div>
       </body>

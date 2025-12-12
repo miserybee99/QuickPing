@@ -62,7 +62,7 @@ export function FilePreviewModal({
           <p className="text-center mb-4">PDF Preview</p>
           <Button onClick={() => window.open(getFileUrl(file.url), '_blank')}>
             <ExternalLink className="h-4 w-4 mr-2" />
-            Mở trong tab mới
+            Open in new tab
           </Button>
         </div>
       );
@@ -71,11 +71,11 @@ export function FilePreviewModal({
     return (
       <div className="bg-muted p-8 rounded-lg text-center">
         <p className="text-muted-foreground">
-          Không thể xem trước file này
+          Cannot preview this file
         </p>
         <Button className="mt-4" onClick={onDownload}>
           <Download className="h-4 w-4 mr-2" />
-          Tải xuống
+          Download
         </Button>
       </div>
     );
@@ -111,7 +111,7 @@ export function FilePreviewModal({
                 {onDownload && (
                   <Button size="sm" variant="secondary" onClick={onDownload}>
                     <Download className="h-4 w-4 mr-2" />
-                    Tải
+                    Download
                   </Button>
                 )}
                 {onDelete && (

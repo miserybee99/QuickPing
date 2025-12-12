@@ -76,17 +76,17 @@ export function FileDropzone({
         <input {...getInputProps()} />
         <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
         {isDragActive ? (
-          <p className="text-lg font-medium text-primary">Thả file vào đây...</p>
+          <p className="text-lg font-medium text-primary">Drop files here...</p>
         ) : (
           <div>
             <p className="text-lg font-medium mb-2">
-              Kéo và thả file vào đây
+              Drag and drop files here
             </p>
             <p className="text-sm text-muted-foreground mb-4">
-              hoặc click để chọn file
+              or click to select files
             </p>
             <p className="text-xs text-muted-foreground">
-              Tối đa {maxFiles} files, mỗi file tối đa {formatFileSize(maxSize)}
+              Max {maxFiles} files, each up to {formatFileSize(maxSize)}
             </p>
           </div>
         )}
@@ -102,10 +102,10 @@ export function FileDropzone({
           >
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">
-                {selectedFiles.length} file đã chọn
+                {selectedFiles.length} files selected
               </p>
               <Button onClick={handleUpload} size="sm">
-                Tải lên
+                Upload
               </Button>
             </div>
 

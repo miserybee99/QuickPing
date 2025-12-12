@@ -13,7 +13,7 @@ import api from '@/lib/api';
 import { apiClient } from '@/lib/api-client';
 import { Conversation } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
-import vi from 'date-fns/locale/vi';
+import { enUS } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/useUser';
 import { useSocket } from '@/contexts/SocketContext';
@@ -207,7 +207,7 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
 
   const getTimeAgo = (date: Date | string): string => {
     try {
-      return formatDistanceToNow(new Date(date), { addSuffix: true, locale: vi });
+      return formatDistanceToNow(new Date(date), { addSuffix: true, locale: enUS });
     } catch {
       return '';
     }
@@ -247,7 +247,7 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
           <button 
             onClick={() => setSearchDialogOpen(true)}
             className="w-10 h-10 flex items-center justify-center bg-[#615EF0]/10 text-[#615EF0] hover:bg-[#615EF0]/20 rounded-full transition-colors"
-            title="Tin nhắn mới"
+            title="New message"
           >
             <Plus className="w-6 h-6 stroke-[2]" />
           </button>

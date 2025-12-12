@@ -16,9 +16,9 @@ import { apiClient } from '@/lib/api-client';
 import { User } from '@/types';
 
 const steps = [
-  { id: 1, title: 'Thông tin nhóm', description: 'Tên và mô tả' },
-  { id: 2, title: 'Thêm thành viên', description: 'Mời người vào nhóm' },
-  { id: 3, title: 'Hoàn tất', description: 'Xem lại và tạo' },
+  { id: 1, title: 'Group Info', description: 'Name and description' },
+  { id: 2, title: 'Add Members', description: 'Invite people to group' },
+  { id: 3, title: 'Complete', description: 'Review and create' },
 ];
 
 export default function CreateGroupPage() {
@@ -51,7 +51,7 @@ export default function CreateGroupPage() {
   const handleNext = () => {
     // Validate step 2: minimum 2 members
     if (currentStep === 2 && groupData.members.length < 2) {
-      alert('Vui lòng chọn ít nhất 2 thành viên để tạo nhóm');
+      alert('Please select at least 2 members to create a group');
       return;
     }
     if (currentStep < 3) setCurrentStep(currentStep + 1);
@@ -63,7 +63,7 @@ export default function CreateGroupPage() {
 
   const handleCreateGroup = async () => {
     if (groupData.members.length < 2) {
-      alert('Nhóm phải có ít nhất 2 thành viên');
+      alert('Group must have at least 2 members');
       return;
     }
     
@@ -77,7 +77,7 @@ export default function CreateGroupPage() {
       router.push('/groups');
     } catch (error) {
       console.error('Error creating group:', error);
-      alert('Không thể tạo nhóm. Vui lòng thử lại.');
+      alert('Could not create group. Please try again.');
     } finally {
       setCreating(false);
     }
@@ -147,18 +147,18 @@ export default function CreateGroupPage() {
                 >
                   <div className="text-center mb-8">
                     <Users className="h-16 w-16 mx-auto mb-4 text-primary" />
-                    <h2 className="text-2xl font-bold">Tạo nhóm mới</h2>
+                    <h2 className="text-2xl font-bold">Create New Group</h2>
                     <p className="text-muted-foreground">
-                      Bắt đầu bằng cách đặt tên và mô tả cho nhóm
+                      Start by setting a name and description for the group
                     </p>
                   </div>
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Tên nhóm *</Label>
+                      <Label htmlFor="name">Group Name *</Label>
                       <Input
                         id="name"
-                        placeholder="Nhập tên nhóm"
+                        placeholder="Enter group name"
                         value={groupData.name}
                         onChange={(e) =>
                           setGroupData({ ...groupData, name: e.target.value })
@@ -167,10 +167,10 @@ export default function CreateGroupPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="description">Mô tả</Label>
+                      <Label htmlFor="description">Description</Label>
                       <Textarea
                         id="description"
-                        placeholder="Mô tả về nhóm..."
+                        placeholder="Describe the group..."
                         rows={4}
                         value={groupData.description}
                         onChange={(e) =>
@@ -194,9 +194,9 @@ export default function CreateGroupPage() {
                   className="space-y-6"
                 >
                   <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold">Thêm thành viên</h2>
+                    <h2 className="text-2xl font-bold">Add Members</h2>
                     <p className="text-muted-foreground">
-                      Chọn bạn bè để mời vào nhóm
+                      Select friends to invite to the group
                     </p>
                   </div>
 
@@ -207,7 +207,7 @@ export default function CreateGroupPage() {
                   ) : availableUsers.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Bạn chưa có bạn bè nào để thêm vào nhóm</p>
+                      <p>You have no friends to add to the group</p>
                     </div>
                   ) : (
                     <ScrollArea className="h-[400px] pr-4">
@@ -242,11 +242,11 @@ export default function CreateGroupPage() {
 
                   <div className="text-center space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      Đã chọn {groupData.members.length} thành viên
+                      {groupData.members.length} members selected
                     </p>
                     {groupData.members.length < 2 && (
                       <p className="text-sm text-orange-600">
-                        ⚠️ Cần chọn ít nhất 2 thành viên để tạo nhóm
+                        ⚠️ Select at least 2 members to create a group
                       </p>
                     )}
                   </div>
@@ -263,21 +263,21 @@ export default function CreateGroupPage() {
                 >
                   <div className="text-center mb-8">
                     <Check className="h-16 w-16 mx-auto mb-4 text-green-500" />
-                    <h2 className="text-2xl font-bold">Xem lại thông tin</h2>
+                    <h2 className="text-2xl font-bold">Review Information</h2>
                     <p className="text-muted-foreground">
-                      Kiểm tra lại trước khi tạo nhóm
+                      Check before creating the group
                     </p>
                   </div>
 
                   <div className="space-y-4">
                     <div className="p-4 bg-muted/30 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-1">Tên nhóm</p>
+                      <p className="text-sm text-muted-foreground mb-1">Group Name</p>
                       <p className="font-semibold">{groupData.name}</p>
                     </div>
 
                     {groupData.description && (
                       <div className="p-4 bg-muted/30 rounded-lg">
-                        <p className="text-sm text-muted-foreground mb-1">Mô tả</p>
+                        <p className="text-sm text-muted-foreground mb-1">Description</p>
                         <p>{groupData.description}</p>
                       </div>
                     )}
@@ -285,7 +285,7 @@ export default function CreateGroupPage() {
                     {groupData.members.length > 0 && (
                     <div className="p-4 bg-muted/30 rounded-lg">
                       <p className="text-sm text-muted-foreground mb-3">
-                        Thành viên ({groupData.members.length})
+                        Members ({groupData.members.length})
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {groupData.members.map((memberId) => {
@@ -320,7 +320,7 @@ export default function CreateGroupPage() {
                   disabled={currentStep === 1}
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Quay lại
+                  Back
                 </Button>
 
                 {currentStep < 3 ? (
@@ -328,7 +328,7 @@ export default function CreateGroupPage() {
                     onClick={handleNext}
                     disabled={currentStep === 1 && !groupData.name}
                   >
-                    Tiếp theo
+                    Next
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 ) : (
@@ -336,12 +336,12 @@ export default function CreateGroupPage() {
                     {creating ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Đang tạo...
+                        Creating...
                       </>
                     ) : (
                       <>
                     <Check className="h-4 w-4 mr-2" />
-                    Tạo nhóm
+                    Create Group
                       </>
                     )}
                   </Button>

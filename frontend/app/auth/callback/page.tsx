@@ -9,7 +9,7 @@ import api from '@/lib/api';
 function AuthCallbackContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Đang xử lý đăng nhập...');
+  const [message, setMessage] = useState('Processing login...');
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -21,7 +21,7 @@ function AuthCallbackContent() {
 
         if (error) {
           setStatus('error');
-          setMessage('Đăng nhập thất bại. Vui lòng thử lại.');
+          setMessage('Login failed. Please try again.');
           setTimeout(() => {
             window.location.href = '/login';
           }, 2000);
@@ -30,7 +30,7 @@ function AuthCallbackContent() {
 
         if (!token) {
           setStatus('error');
-          setMessage('Không tìm thấy token xác thực.');
+          setMessage('Authentication token not found.');
           setTimeout(() => {
             window.location.href = '/login';
           }, 2000);
@@ -62,7 +62,7 @@ function AuthCallbackContent() {
           console.error('❌ Failed to fetch user:', apiError);
           // Token might still be valid, try redirecting anyway
           setStatus('success');
-          setMessage('Đăng nhập thành công! Đang chuyển hướng...');
+          setMessage('Login successful! Redirecting...');
           setTimeout(() => {
             window.location.href = '/';
           }, 1000);
@@ -71,7 +71,7 @@ function AuthCallbackContent() {
       } catch (error: any) {
         console.error('❌ Auth callback error:', error);
         setStatus('error');
-        setMessage(error.response?.data?.error || 'Có lỗi xảy ra. Vui lòng thử lại.');
+        setMessage(error.response?.data?.error || 'An error occurred. Please try again.');
         
         // Clear any invalid token
         localStorage.removeItem('token');
@@ -106,7 +106,7 @@ function AuthCallbackContent() {
               {message}
             </h2>
             <p className="text-gray-500 dark:text-gray-400">
-              Vui lòng chờ trong giây lát...
+              Please wait a moment...
             </p>
           </motion.div>
         )}
@@ -142,7 +142,7 @@ function AuthCallbackContent() {
               <AlertCircle className="h-16 w-16 text-red-500" />
             </div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Đăng nhập thất bại
+              Login Failed
             </h2>
             <p className="text-gray-500 dark:text-gray-400">
               {message}

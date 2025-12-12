@@ -82,12 +82,12 @@ export default function GroupsPage() {
     <PageWrapper>
       <PageHeader
         icon={Users}
-        title="Nhóm của tôi"
-        subtitle={`${groups.length} nhóm`}
+        title="My Groups"
+        subtitle={`${groups.length} groups`}
         actions={
           <Button onClick={() => router.push('/groups/create')}>
             <Plus className="h-4 w-4 mr-2" />
-            Tạo nhóm mới
+            Create New Group
           </Button>
         }
       />
@@ -98,7 +98,7 @@ export default function GroupsPage() {
           <div className="relative max-w-xl">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Tìm kiếm nhóm..."
+              placeholder="Search groups..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -116,7 +116,7 @@ export default function GroupsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{groups.length}</p>
-                  <p className="text-sm text-muted-foreground">Tổng số nhóm</p>
+                  <p className="text-sm text-muted-foreground">Total Groups</p>
                 </div>
               </div>
             </CardContent>
@@ -132,7 +132,7 @@ export default function GroupsPage() {
                   <p className="text-2xl font-bold">
                     {groups.filter((g) => getGroupRole(g) === 'admin').length}
                   </p>
-                  <p className="text-sm text-muted-foreground">Nhóm quản lý</p>
+                  <p className="text-sm text-muted-foreground">Groups Managed</p>
                 </div>
               </div>
             </CardContent>
@@ -148,7 +148,7 @@ export default function GroupsPage() {
                   <p className="text-2xl font-bold">
                     {groups.reduce((sum, g) => sum + g.participants.length, 0)}
                   </p>
-                  <p className="text-sm text-muted-foreground">Tổng thành viên</p>
+                  <p className="text-sm text-muted-foreground">Total Members</p>
                 </div>
               </div>
             </CardContent>
@@ -160,15 +160,15 @@ export default function GroupsPage() {
           <div className="text-center py-12 text-muted-foreground">
             <Users className="h-16 w-16 mx-auto mb-4 opacity-50" />
             <p className="text-lg mb-2">
-              {groups.length === 0 ? 'Bạn chưa có nhóm nào' : 'Không tìm thấy nhóm'}
+              {groups.length === 0 ? 'You have no groups yet' : 'No groups found'}
             </p>
             {groups.length === 0 && (
-              <p className="text-sm mb-4">Tạo nhóm mới để bắt đầu trò chuyện cùng nhiều người</p>
+              <p className="text-sm mb-4">Create a group to start chatting with multiple people</p>
             )}
             {groups.length === 0 && (
               <Button onClick={() => router.push('/groups/create')}>
                 <Plus className="h-4 w-4 mr-2" />
-                Tạo nhóm đầu tiên
+                Create First Group
               </Button>
             )}
           </div>
@@ -199,7 +199,7 @@ export default function GroupsPage() {
                             <div className="flex-1 min-w-0">
                               <h3 className="font-semibold truncate">{group.name}</h3>
                               <p className="text-sm text-muted-foreground">
-                                {group.participants.length} thành viên
+                                {group.participants.length} members
                               </p>
                             </div>
                           </div>
@@ -235,7 +235,7 @@ export default function GroupsPage() {
                           </div>
                           {group.participants.length > 5 && (
                             <span className="text-xs text-muted-foreground">
-                              +{group.participants.length - 5} khác
+                              +{group.participants.length - 5} more
                             </span>
                           )}
                         </div>
@@ -248,7 +248,7 @@ export default function GroupsPage() {
                             onClick={() => router.push(`/?conversation=${group._id}`)}
                           >
                             <MessageCircle className="h-4 w-4 mr-2" />
-                            Nhắn tin
+                            Message
                           </Button>
                           {(role === 'admin' || role === 'moderator') && (
                             <>
@@ -259,7 +259,7 @@ export default function GroupsPage() {
                                   e.stopPropagation();
                                   handleAddMembers(group);
                                 }}
-                                title="Thêm thành viên"
+                                title="Add members"
                               >
                                 <UserPlus className="h-4 w-4" />
                               </Button>
@@ -270,7 +270,7 @@ export default function GroupsPage() {
                                   e.stopPropagation();
                                   // TODO: Implement group settings
                                 }}
-                                title="Cài đặt nhóm"
+                                title="Group settings"
                               >
                                 <Settings className="h-4 w-4" />
                               </Button>

@@ -99,7 +99,7 @@ export function AddMembersModal({
       onOpenChange(false);
     } catch (error) {
       console.error('Error adding members:', error);
-      alert('Không thể thêm thành viên. Vui lòng thử lại.');
+      alert('Could not add members. Please try again.');
     } finally {
       setAdding(false);
     }
@@ -124,10 +124,10 @@ export function AddMembersModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            Thêm thành viên
+            Add Members
           </DialogTitle>
           <DialogDescription>
-            Chọn bạn bè để thêm vào nhóm
+            Select friends to add to the group
           </DialogDescription>
         </DialogHeader>
 
@@ -136,7 +136,7 @@ export function AddMembersModal({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Tìm kiếm bạn bè..."
+              placeholder="Search friends..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -147,7 +147,7 @@ export function AddMembersModal({
           {selectedUsers.length > 0 && (
             <div className="flex items-center gap-2">
               <Badge variant="secondary">
-                Đã chọn {selectedUsers.length} người
+                {selectedUsers.length} selected
               </Badge>
               <Button
                 variant="ghost"
@@ -155,7 +155,7 @@ export function AddMembersModal({
                 onClick={() => setSelectedUsers([])}
               >
                 <X className="h-3 w-3 mr-1" />
-                Xóa tất cả
+                Clear all
               </Button>
             </div>
           )}
@@ -170,8 +170,8 @@ export function AddMembersModal({
               <UserPlus className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p className="text-sm">
                 {friends.length === 0
-                  ? 'Tất cả bạn bè đã có trong nhóm'
-                  : 'Không tìm thấy kết quả'}
+                  ? 'All friends are already in the group'
+                  : 'No results found'}
               </p>
             </div>
           ) : (
@@ -217,7 +217,7 @@ export function AddMembersModal({
             onClick={() => onOpenChange(false)}
             disabled={adding}
           >
-            Hủy
+            Cancel
           </Button>
           <Button
             onClick={handleAddMembers}
@@ -226,12 +226,12 @@ export function AddMembersModal({
             {adding ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Đang thêm...
+                Adding...
               </>
             ) : (
               <>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Thêm {selectedUsers.length > 0 && `(${selectedUsers.length})`}
+                Add {selectedUsers.length > 0 && `(${selectedUsers.length})`}
               </>
             )}
           </Button>

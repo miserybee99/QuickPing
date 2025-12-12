@@ -78,10 +78,10 @@ export default function ProfilePage() {
         localStorage.setItem('user', JSON.stringify(updatedUser));
       }
       
-      alert('Cập nhật profile thành công!');
+      alert('Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Không thể cập nhật profile. Vui lòng thử lại.');
+      alert('Could not update profile. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -91,20 +91,20 @@ export default function ProfilePage() {
     <PageWrapper>
       <PageHeader
         icon={UserIcon}
-        title="Hồ sơ cá nhân"
-        subtitle="Quản lý thông tin cá nhân của bạn"
+        title="Profile"
+        subtitle="Manage your personal information"
         showBackButton
         actions={
           <Button onClick={handleSaveProfile} disabled={saving}>
             {saving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Đang lưu...
+                Saving...
               </>
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Lưu thay đổi
+                Save Changes
               </>
             )}
           </Button>
@@ -120,9 +120,9 @@ export default function ProfilePage() {
           {/* Profile Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Thông tin cá nhân</CardTitle>
+                  <CardTitle>Personal Information</CardTitle>
                   <CardDescription>
-                Cập nhật thông tin hồ sơ hiển thị công khai của bạn
+                Update your publicly visible profile information
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -158,15 +158,15 @@ export default function ProfilePage() {
               <div className="grid gap-6">
                   {/* Username */}
                   <div className="space-y-2">
-                  <Label htmlFor="username">Tên hiển thị</Label>
+                  <Label htmlFor="username">Display Name</Label>
                     <Input
                       id="username"
                       value={profile.username}
                       onChange={(e) => setProfile({ ...profile, username: e.target.value })}
-                    placeholder="Nhập tên hiển thị"
+                    placeholder="Enter display name"
                     />
                   <p className="text-xs text-muted-foreground">
-                    Tên này sẽ hiển thị cho người khác khi họ nhìn thấy bạn
+                    This name will be visible to others
                   </p>
                   </div>
 
@@ -181,14 +181,14 @@ export default function ProfilePage() {
                     className="bg-muted"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Email không thể thay đổi
+                    Email cannot be changed
                   </p>
                 </div>
 
                 {/* MSSV */}
                 {profile.mssv && (
                   <div className="space-y-2">
-                    <Label htmlFor="mssv">Mã số sinh viên</Label>
+                    <Label htmlFor="mssv">Student ID</Label>
                     <Input
                       id="mssv"
                       value={profile.mssv}
@@ -200,17 +200,17 @@ export default function ProfilePage() {
 
                   {/* Bio */}
                   <div className="space-y-2">
-                  <Label htmlFor="bio">Giới thiệu bản thân</Label>
+                  <Label htmlFor="bio">About</Label>
                     <Textarea
                       id="bio"
                       value={profile.bio}
                       onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                      placeholder="Viết vài dòng về bạn..."
+                      placeholder="Write a few lines about yourself..."
                       rows={4}
                     maxLength={200}
                     />
                   <p className="text-xs text-muted-foreground text-right">
-                      {profile.bio.length}/200 ký tự
+                      {profile.bio.length}/200 characters
                     </p>
                   </div>
                   </div>
@@ -220,27 +220,27 @@ export default function ProfilePage() {
           {/* Account Stats */}
               <Card>
                 <CardHeader>
-              <CardTitle>Thống kê tài khoản</CardTitle>
+              <CardTitle>Account Statistics</CardTitle>
                 </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-2xl font-bold text-primary">0</p>
-                  <p className="text-sm text-muted-foreground">Bạn bè</p>
+                  <p className="text-sm text-muted-foreground">Friends</p>
                       </div>
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-2xl font-bold text-primary">0</p>
-                  <p className="text-sm text-muted-foreground">Nhóm</p>
+                  <p className="text-sm text-muted-foreground">Groups</p>
                     </div>
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-2xl font-bold text-primary">0</p>
-                  <p className="text-sm text-muted-foreground">Tin nhắn</p>
+                  <p className="text-sm text-muted-foreground">Messages</p>
                     </div>
                 <div className="text-center p-4 border rounded-lg">
                   <p className="text-2xl font-bold text-primary">
                     {user?.is_verified ? '✓' : '✗'}
                   </p>
-                  <p className="text-sm text-muted-foreground">Xác thực</p>
+                  <p className="text-sm text-muted-foreground">Verified</p>
                     </div>
                   </div>
                 </CardContent>

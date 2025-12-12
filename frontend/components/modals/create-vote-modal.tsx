@@ -42,13 +42,13 @@ interface CreateVoteModalProps {
 }
 
 const EXPIRY_OPTIONS = [
-  { value: 'none', label: 'Không giới hạn' },
-  { value: '1h', label: '1 giờ' },
-  { value: '6h', label: '6 giờ' },
-  { value: '12h', label: '12 giờ' },
-  { value: '24h', label: '24 giờ' },
-  { value: '48h', label: '2 ngày' },
-  { value: '168h', label: '1 tuần' },
+  { value: 'none', label: 'No limit' },
+  { value: '1h', label: '1 hour' },
+  { value: '6h', label: '6 hours' },
+  { value: '12h', label: '12 hours' },
+  { value: '24h', label: '24 hours' },
+  { value: '48h', label: '2 days' },
+  { value: '168h', label: '1 week' },
 ];
 
 export function CreateVoteModal({
@@ -100,17 +100,17 @@ export function CreateVoteModal({
     const newErrors: { question?: string; options?: string } = {};
 
     if (!question.trim()) {
-      newErrors.question = 'Vui lòng nhập câu hỏi';
+      newErrors.question = 'Please enter a question';
     }
 
     const filledOptions = options.filter((opt) => opt.trim());
     if (filledOptions.length < 2) {
-      newErrors.options = 'Cần ít nhất 2 lựa chọn';
+      newErrors.options = 'At least 2 options required';
     }
 
     const uniqueOptions = new Set(filledOptions.map((opt) => opt.toLowerCase().trim()));
     if (uniqueOptions.size !== filledOptions.length) {
-      newErrors.options = 'Các lựa chọn không được trùng nhau';
+      newErrors.options = 'Options must be unique';
     }
 
     setErrors(newErrors);
@@ -159,8 +159,8 @@ export function CreateVoteModal({
               <BarChart3 className="w-6 h-6 text-[#615EF0]" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold">Tạo bình chọn</DialogTitle>
-              <p className="text-sm text-gray-500 mt-0.5">Tạo cuộc bình chọn cho nhóm</p>
+              <DialogTitle className="text-xl font-bold">Create Poll</DialogTitle>
+              <p className="text-sm text-gray-500 mt-0.5">Create a poll for the group</p>
             </div>
           </div>
         </DialogHeader>
@@ -170,12 +170,12 @@ export function CreateVoteModal({
           {/* Question Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">
-              Câu hỏi <span className="text-red-500">*</span>
+              Question <span className="text-red-500">*</span>
             </label>
             <Input
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Nhập câu hỏi bình chọn..."
+              placeholder="Enter poll question..."
               className={cn(
                 'focus-visible:ring-[#615EF0]',
                 errors.question && 'border-red-500 focus-visible:ring-red-500'
@@ -194,7 +194,7 @@ export function CreateVoteModal({
           {/* Options */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">
-              Lựa chọn <span className="text-red-500">*</span>
+              Options <span className="text-red-500">*</span>
             </label>
             <div className="space-y-2">
               {options.map((option, index) => (
@@ -210,7 +210,7 @@ export function CreateVoteModal({
                   <Input
                     value={option}
                     onChange={(e) => updateOption(index, e.target.value)}
-                    placeholder={`Lựa chọn ${index + 1}`}
+                    placeholder={`Option ${index + 1}`}
                     className="flex-1 focus-visible:ring-[#615EF0]"
                     maxLength={100}
                   />
@@ -241,15 +241,15 @@ export function CreateVoteModal({
                 className="w-full mt-2 border-dashed"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Thêm lựa chọn
+                Add Option
               </Button>
             )}
-            <p className="text-xs text-gray-400">{options.length}/10 lựa chọn</p>
+            <p className="text-xs text-gray-400">{options.length}/10 options</p>
           </div>
 
           {/* Settings */}
           <div className="space-y-4 pt-4 border-t border-gray-100">
-            <p className="text-sm font-medium text-gray-700">Cài đặt</p>
+            <p className="text-sm font-medium text-gray-700">Settings</p>
 
             {/* Allow Multiple */}
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
@@ -258,8 +258,8 @@ export function CreateVoteModal({
                   <Users className="w-4 h-4 text-gray-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Cho phép chọn nhiều</p>
-                  <p className="text-xs text-gray-500">Người dùng có thể chọn nhiều lựa chọn</p>
+                  <p className="text-sm font-medium">Allow Multiple</p>
+                  <p className="text-xs text-gray-500">Users can select multiple options</p>
                 </div>
               </div>
               <Switch
@@ -279,8 +279,8 @@ export function CreateVoteModal({
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Bình chọn ẩn danh</p>
-                  <p className="text-xs text-gray-500">Ẩn danh tính người bình chọn</p>
+                  <p className="text-sm font-medium">Anonymous Voting</p>
+                  <p className="text-xs text-gray-500">Hide voter identity</p>
                 </div>
               </div>
               <Switch checked={anonymous} onCheckedChange={setAnonymous} />
@@ -293,8 +293,8 @@ export function CreateVoteModal({
                   <Clock className="w-4 h-4 text-gray-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Thời hạn</p>
-                  <p className="text-xs text-gray-500">Tự động kết thúc sau</p>
+                  <p className="text-sm font-medium">Duration</p>
+                  <p className="text-xs text-gray-500">Auto-close after</p>
                 </div>
               </div>
               <Select value={expiryOption} onValueChange={setExpiryOption}>
@@ -316,7 +316,7 @@ export function CreateVoteModal({
         {/* Footer */}
         <div className="border-t p-4 flex justify-end gap-3 bg-gray-50">
           <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
-            Hủy
+            Cancel
           </Button>
           <Button
             className="bg-[#615EF0] hover:bg-[#5048D9]"
@@ -330,12 +330,12 @@ export function CreateVoteModal({
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
                 />
-                Đang tạo...
+                Creating...
               </>
             ) : (
               <>
                 <BarChart3 className="w-4 h-4 mr-2" />
-                Tạo bình chọn
+                Create Poll
               </>
             )}
           </Button>

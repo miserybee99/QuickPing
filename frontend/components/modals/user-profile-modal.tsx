@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, MessageSquare, UserPlus, Ban } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import vi from 'date-fns/locale/vi';
+import { enUS } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -102,7 +102,7 @@ export function UserProfileModal({
                     <Badge variant="secondary">Offline</Badge>
                     {user.last_seen && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Last seen {formatDistanceToNow(new Date(user.last_seen), { addSuffix: true, locale: vi })}
+                        Last seen {formatDistanceToNow(new Date(user.last_seen), { addSuffix: true, locale: enUS })}
                       </p>
                     )}
                   </div>
@@ -112,7 +112,7 @@ export function UserProfileModal({
                   <>
                     <Separator className="my-4" />
                     <div>
-                      <p className="text-sm font-semibold mb-2">Tiểu sử</p>
+                      <p className="text-sm font-semibold mb-2">Bio</p>
                       <p className="text-sm text-muted-foreground">{user.bio}</p>
                     </div>
                   </>
@@ -131,7 +131,7 @@ export function UserProfileModal({
                       }}
                     >
                       <MessageSquare className="h-4 w-4 mr-2" />
-                      Nhắn tin
+                      Message
                     </Button>
                   )}
                   
@@ -145,7 +145,7 @@ export function UserProfileModal({
                         }}
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
-                        Kết bạn
+                        Add Friend
                       </Button>
                     )}
                     
@@ -159,7 +159,7 @@ export function UserProfileModal({
                         }}
                       >
                         <Ban className="h-4 w-4 mr-2" />
-                        Chặn
+                        Block
                       </Button>
                     )}
                   </div>

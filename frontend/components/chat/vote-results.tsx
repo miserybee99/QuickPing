@@ -5,7 +5,7 @@ import { Trophy, Users, Lock, Calendar } from 'lucide-react';
 import { VoteOptionComponent } from './vote-option';
 import { Vote } from '@/types';
 import { format } from 'date-fns';
-import vi from 'date-fns/locale/vi';
+import { enUS } from 'date-fns/locale';
 
 interface VoteResultsProps {
   vote: Vote;
@@ -44,13 +44,13 @@ export function VoteResults({ vote, users }: VoteResultsProps) {
             <Trophy className="w-5 h-5 text-green-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">Kết quả bình chọn</h3>
-            <p className="text-xs text-gray-500">Bình chọn đã kết thúc</p>
+            <h3 className="font-semibold text-gray-900">Vote Results</h3>
+            <p className="text-xs text-gray-500">Voting has ended</p>
           </div>
           {vote.settings.anonymous && (
             <div className="ml-auto flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
               <Lock className="w-3 h-3" />
-              Ẩn danh
+              Anonymous
             </div>
           )}
         </div>
@@ -67,7 +67,7 @@ export function VoteResults({ vote, users }: VoteResultsProps) {
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-green-600" />
             <span className="text-sm font-medium text-green-700">
-              {winners.length === 1 ? 'Kết quả thắng:' : 'Hòa nhau:'}{' '}
+              {winners.length === 1 ? 'Winner:' : 'Tied:'}{' '}
               {winners.map((w) => w.option.text).join(', ')}
             </span>
             <span className="text-xs text-green-600 ml-auto">
@@ -102,12 +102,12 @@ export function VoteResults({ vote, users }: VoteResultsProps) {
       <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
         <span className="flex items-center gap-1">
           <Users className="w-4 h-4" />
-          {totalVotes} người đã bình chọn
+          {totalVotes} voted
         </span>
         {vote.expires_at && (
           <span className="flex items-center gap-1 text-xs">
             <Calendar className="w-3 h-3" />
-            Kết thúc {format(new Date(vote.expires_at), 'HH:mm dd/MM', { locale: vi })}
+            Ended {format(new Date(vote.expires_at), 'HH:mm MM/dd', { locale: enUS })}
           </span>
         )}
       </div>

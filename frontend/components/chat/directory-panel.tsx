@@ -165,7 +165,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
       onConversationUpdated?.(updatedConversation);
     } catch (error: any) {
       console.error('Error changing role:', error);
-      alert(error?.response?.data?.error || 'Không thể thay đổi role. Vui lòng thử lại.');
+      alert(error?.response?.data?.error || 'Could not change role. Please try again.');
     }
   };
 
@@ -191,7 +191,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
   const handleLeaveGroup = async () => {
     if (!conversation) return;
     
-    if (!confirm('Bạn có chắc chắn muốn rời khỏi nhóm này?')) {
+    if (!confirm('Are you sure you want to leave this group?')) {
       return;
     }
     

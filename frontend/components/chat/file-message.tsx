@@ -282,7 +282,7 @@ function DocumentMessage({
             ? 'hover:bg-white/20 text-white'
             : 'hover:bg-gray-200 text-gray-600'
         )}
-        title="Tải xuống"
+        title="Download"
       >
         <Download className="w-4 h-4" />
       </button>

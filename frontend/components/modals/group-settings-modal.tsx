@@ -133,7 +133,7 @@ export function GroupSettingsModal({
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error updating group:', error);
-      alert(error?.response?.data?.error || 'Không thể cập nhật nhóm. Vui lòng thử lại.');
+      alert(error?.response?.data?.error || 'Could not update group. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -162,7 +162,7 @@ export function GroupSettingsModal({
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error leaving group:', error);
-      alert(error?.response?.data?.error || 'Không thể rời nhóm. Vui lòng thử lại.');
+      alert(error?.response?.data?.error || 'Could not leave group. Please try again.');
     } finally {
       setIsSaving(false);
       setConfirmAction(null);
@@ -178,7 +178,7 @@ export function GroupSettingsModal({
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error deleting group:', error);
-      alert(error?.response?.data?.error || 'Không thể xóa nhóm. Vui lòng thử lại.');
+      alert(error?.response?.data?.error || 'Could not delete group. Please try again.');
     } finally {
       setIsSaving(false);
       setConfirmAction(null);
@@ -234,7 +234,7 @@ export function GroupSettingsModal({
             <DialogTitle className="text-xl font-bold">{conversation.name || 'Group'}</DialogTitle>
             <p className="text-sm text-gray-500 mt-1">
               <Users className="w-4 h-4 inline mr-1" />
-              {conversation.participants?.length || 0} thành viên
+              {conversation.participants?.length || 0} members
             </p>
           </div>
         </DialogHeader>
@@ -243,11 +243,11 @@ export function GroupSettingsModal({
         <div className="px-6 pb-4 space-y-4 max-h-[400px] overflow-y-auto">
           {/* Group Name */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Tên nhóm</label>
+            <label className="text-sm font-medium text-gray-700">Group Name</label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Nhập tên nhóm"
+              placeholder="Enter group name"
               disabled={!canEdit}
               className="focus-visible:ring-[#615EF0]"
               maxLength={100}
@@ -256,11 +256,11 @@ export function GroupSettingsModal({
 
           {/* Description */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Mô tả</label>
+            <label className="text-sm font-medium text-gray-700">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Nhập mô tả nhóm (không bắt buộc)"
+              placeholder="Enter group description (optional)"
               disabled={!canEdit}
               className="w-full min-h-[80px] px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#615EF0] resize-none disabled:opacity-50 disabled:cursor-not-allowed"
               maxLength={500}
@@ -270,7 +270,7 @@ export function GroupSettingsModal({
 
           {/* Privacy Settings */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Quyền riêng tư</label>
+            <label className="text-sm font-medium text-gray-700">Privacy</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => canEdit && setPrivacy('public')}
@@ -294,7 +294,7 @@ export function GroupSettingsModal({
                 </div>
                 <div className="text-left">
                   <p className="font-medium text-sm">Public</p>
-                  <p className="text-xs text-gray-500">Ai cũng có thể tìm thấy</p>
+                  <p className="text-xs text-gray-500">Anyone can find</p>
                 </div>
               </button>
 
@@ -320,7 +320,7 @@ export function GroupSettingsModal({
                 </div>
                 <div className="text-left">
                   <p className="font-medium text-sm">Private</p>
-                  <p className="text-xs text-gray-500">Chỉ mời mới vào được</p>
+                  <p className="text-xs text-gray-500">Invite only</p>
                 </div>
               </button>
             </div>
@@ -334,12 +334,12 @@ export function GroupSettingsModal({
               onClick={() => setConfirmAction('leave')}
             >
               <LogOut className="w-4 h-4 mr-2" />
-              Rời nhóm
+              Leave Group
             </Button>
             {isLastAdmin && (
               <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
-                Bạn là admin duy nhất. Cần chuyển quyền trước khi rời.
+                You are the only admin. Transfer ownership before leaving.
               </p>
             )}
           </div>
@@ -347,14 +347,14 @@ export function GroupSettingsModal({
           {/* Danger Zone - Delete Group (Admin only) */}
           {canDelete && (
             <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm font-medium text-red-600 mb-2">Vùng nguy hiểm</p>
+              <p className="text-sm font-medium text-red-600 mb-2">Danger Zone</p>
               <Button
                 variant="outline"
                 className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                 onClick={() => setConfirmAction('delete')}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
-                Xóa nhóm
+                Delete Group
               </Button>
             </div>
           )}
@@ -363,7 +363,7 @@ export function GroupSettingsModal({
           {!canEdit && (
             <div className="bg-amber-50 text-amber-700 p-3 rounded-lg text-sm flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span>Chỉ Admin và Moderator mới có thể chỉnh sửa cài đặt nhóm.</span>
+              <span>Only Admin and Moderator can edit group settings.</span>
             </div>
           )}
         </div>
@@ -377,9 +377,9 @@ export function GroupSettingsModal({
                   <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Trash2 className="w-6 h-6 text-red-600" />
                   </div>
-                  <h3 className="text-lg font-bold text-center mb-2">Xóa nhóm?</h3>
+                  <h3 className="text-lg font-bold text-center mb-2">Delete Group?</h3>
                   <p className="text-sm text-gray-600 text-center mb-6">
-                    Hành động này không thể hoàn tác. Tất cả tin nhắn và dữ liệu của nhóm sẽ bị xóa vĩnh viễn.
+                    This action cannot be undone. All messages and group data will be permanently deleted.
                   </p>
                 </>
               )}
@@ -389,9 +389,9 @@ export function GroupSettingsModal({
                   <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <LogOut className="w-6 h-6 text-amber-600" />
                   </div>
-                  <h3 className="text-lg font-bold text-center mb-2">Rời nhóm?</h3>
+                  <h3 className="text-lg font-bold text-center mb-2">Leave Group?</h3>
                   <p className="text-sm text-gray-600 text-center mb-6">
-                    Bạn sẽ không còn nhận được tin nhắn từ nhóm này.
+                    You will no longer receive messages from this group.
                   </p>
                 </>
               )}
@@ -401,9 +401,9 @@ export function GroupSettingsModal({
                   <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Crown className="w-6 h-6 text-amber-600" />
                   </div>
-                  <h3 className="text-lg font-bold text-center mb-2">Chuyển quyền Admin</h3>
+                  <h3 className="text-lg font-bold text-center mb-2">Transfer Admin Role</h3>
                   <p className="text-sm text-gray-600 text-center mb-4">
-                    Bạn là admin duy nhất. Hãy chọn người thay thế trước khi rời.
+                    You are the only admin. Please select a replacement before leaving.
                   </p>
                   <ScrollArea className="max-h-40 mb-4">
                     <div className="space-y-2">
@@ -442,7 +442,7 @@ export function GroupSettingsModal({
                   }}
                   disabled={isSaving}
                 >
-                  Hủy
+                  Cancel
                 </Button>
                 <Button
                   className={cn(
@@ -462,12 +462,12 @@ export function GroupSettingsModal({
                   }
                 >
                   {isSaving
-                    ? 'Đang xử lý...'
+                    ? 'Processing...'
                     : confirmAction === 'delete'
-                    ? 'Xóa nhóm'
+                    ? 'Delete Group'
                     : isLastAdmin && selectedNewAdmin
-                    ? 'Chuyển & Rời'
-                    : 'Rời nhóm'}
+                    ? 'Transfer & Leave'
+                    : 'Leave Group'}
                 </Button>
               </div>
             </div>
@@ -481,7 +481,7 @@ export function GroupSettingsModal({
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
           >
-            Đóng
+            Close
           </Button>
           {canEdit && (
             <Button
@@ -490,11 +490,11 @@ export function GroupSettingsModal({
               disabled={isSaving || !hasChanges}
             >
               {isSaving ? (
-                'Đang lưu...'
+                'Saving...'
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Lưu thay đổi
+                  Save Changes
                 </>
               )}
             </Button>

@@ -47,10 +47,10 @@ export function AvatarUploadDropzone({
 
   const validateFile = (file: File): string | null => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      return 'Chỉ chấp nhận file ảnh (JPG, PNG, GIF, WEBP)';
+      return 'Only image files accepted (JPG, PNG, GIF, WEBP)';
     }
     if (file.size > MAX_FILE_SIZE) {
-      return 'Kích thước file không được vượt quá 5MB';
+      return 'File size must not exceed 5MB';
     }
     return null;
   };
@@ -132,7 +132,7 @@ export function AvatarUploadDropzone({
       resetState();
     } catch (err: any) {
       console.error('Avatar upload error:', err);
-      setError(err?.response?.data?.error || 'Không thể tải lên ảnh. Vui lòng thử lại.');
+      setError(err?.response?.data?.error || 'Could not upload image. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -181,14 +181,14 @@ export function AvatarUploadDropzone({
         className="mt-4"
       >
         <Camera className="h-4 w-4 mr-2" />
-        Đổi ảnh đại diện
+        Change Avatar
       </Button>
 
       {/* Upload Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Đổi ảnh đại diện</DialogTitle>
+            <DialogTitle>Change Avatar</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -220,14 +220,14 @@ export function AvatarUploadDropzone({
                   </div>
                   <div>
                     <p className="font-medium text-gray-700">
-                      Kéo thả ảnh vào đây
+                      Drag and drop image here
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      hoặc click để chọn file
+                      or click to select file
                     </p>
                   </div>
                   <p className="text-xs text-gray-400">
-                    JPG, PNG, GIF hoặc WEBP. Tối đa 5MB.
+                    JPG, PNG, GIF or WEBP. Max 5MB.
                   </p>
                 </div>
               </div>
@@ -257,7 +257,7 @@ export function AvatarUploadDropzone({
                   className="w-full"
                 >
                   <X className="w-4 h-4 mr-2" />
-                  Chọn ảnh khác
+                  Choose another image
                 </Button>
               </div>
             )}
@@ -280,7 +280,7 @@ export function AvatarUploadDropzone({
             {isUploading && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Đang tải lên...</span>
+                  <span className="text-gray-600">Uploading...</span>
                   <span className="font-medium">{uploadProgress}%</span>
                 </div>
                 <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -301,7 +301,7 @@ export function AvatarUploadDropzone({
                 onClick={() => setIsModalOpen(false)}
                 disabled={isUploading}
               >
-                Hủy
+                Cancel
               </Button>
               <Button
                 className="flex-1 bg-[#615EF0] hover:bg-[#5048D9]"
@@ -311,12 +311,12 @@ export function AvatarUploadDropzone({
                 {isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Đang tải...
+                    Uploading...
                   </>
                 ) : (
                   <>
                     <Check className="w-4 h-4 mr-2" />
-                    Lưu ảnh
+                    Save
                   </>
                 )}
               </Button>

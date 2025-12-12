@@ -43,7 +43,7 @@ function VerifyEmailContent() {
 
   const handleVerify = useCallback(async () => {
     if (otp.length !== 6) {
-      setError('Vui lòng nhập đủ 6 chữ số');
+      setError('Please enter all 6 digits');
       return;
     }
 
@@ -72,7 +72,7 @@ function VerifyEmailContent() {
 
     } catch (err: any) {
       const errorData = err.response?.data;
-      setError(errorData?.error || 'Xác thực thất bại. Vui lòng thử lại.');
+      setError(errorData?.error || 'Verification failed. Please try again.');
       
       if (errorData?.remainingAttempts !== undefined) {
         setRemainingAttempts(errorData.remainingAttempts);
@@ -100,9 +100,9 @@ function VerifyEmailContent() {
     } catch (err: any) {
       const errorData = err.response?.data;
       if (errorData?.retryAfter) {
-        throw new Error(`Vui lòng đợi ${errorData.retryAfter} giây`);
+        throw new Error(`Please wait ${errorData.retryAfter} seconds`);
       }
-      throw new Error(errorData?.error || 'Không thể gửi lại mã');
+      throw new Error(errorData?.error || 'Could not resend code');
     }
   };
 
@@ -121,9 +121,9 @@ function VerifyEmailContent() {
                 <CheckCircle className="h-16 w-16 text-green-600 dark:text-green-400" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold mb-2">Xác thực thành công! 🎉</h2>
+            <h2 className="text-2xl font-bold mb-2">Verification successful! 🎉</h2>
             <p className="text-muted-foreground mb-4">
-              Email của bạn đã được xác thực. Đang chuyển hướng...
+              Your email has been verified. Redirecting...
             </p>
             <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
           </Card>
@@ -155,11 +155,11 @@ function VerifyEmailContent() {
               </motion.div>
               
               <div className="space-y-2">
-                <CardTitle className="text-2xl font-bold">Xác thực Email</CardTitle>
+                <CardTitle className="text-2xl font-bold">Verify Email</CardTitle>
                 <CardDescription className="text-base">
-                  Chúng tôi đã gửi mã xác thực 6 chữ số đến
+                  We sent a 6-digit verification code to
                 </CardDescription>
-                <p className="font-medium text-foreground">{email || 'email của bạn'}</p>
+                <p className="font-medium text-foreground">{email || 'your email'}</p>
               </div>
             </CardHeader>
 
@@ -180,7 +180,7 @@ function VerifyEmailContent() {
                 <Alert className="bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-200">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Còn {remainingAttempts} lần thử. Sau đó bạn cần yêu cầu mã mới.
+                    {remainingAttempts} attempts remaining. After that you need to request a new code.
                   </AlertDescription>
                 </Alert>
               )}
@@ -203,10 +203,10 @@ function VerifyEmailContent() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Đang xác thực...
+                    Verifying...
                   </>
                 ) : (
-                  'Xác nhận'
+                  'Verify'
                 )}
               </Button>
 
@@ -222,7 +222,7 @@ function VerifyEmailContent() {
                 <Link href="/register">
                   <Button variant="ghost" className="w-full">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Dùng email khác
+                    Use a different email
                   </Button>
                 </Link>
               </div>
@@ -230,9 +230,9 @@ function VerifyEmailContent() {
           </Card>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Mã xác thực sẽ hết hạn sau 10 phút.
+            The verification code will expire in 10 minutes.
             <br />
-            Kiểm tra thư mục spam nếu không thấy email.
+            Check your spam folder if you don't see the email.
           </p>
         </motion.div>
       </div>

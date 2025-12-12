@@ -46,7 +46,7 @@ export function FileUploadProgress({ files, onCancel }: FileUploadProgressProps)
     >
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Đang tải lên {files.length} file</h3>
+          <h3 className="font-semibold">Uploading {files.length} files</h3>
         </div>
 
         <div className="space-y-3 max-h-[400px] overflow-y-auto">
@@ -85,11 +85,11 @@ export function FileUploadProgress({ files, onCancel }: FileUploadProgressProps)
                   )}
                   
                   {file.status === 'completed' && (
-                    <p className="text-xs text-green-600 mt-1">✓ Hoàn thành</p>
+                    <p className="text-xs text-green-600 mt-1">✓ Completed</p>
                   )}
                   
                   {file.status === 'error' && (
-                    <p className="text-xs text-red-600 mt-1">✗ Lỗi tải lên</p>
+                    <p className="text-xs text-red-600 mt-1">✗ Upload failed</p>
                   )}
                 </div>
 

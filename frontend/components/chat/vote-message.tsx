@@ -51,7 +51,7 @@ export function VoteMessage({
 
     if (diff <= 0) {
       setIsExpired(true);
-      setTimeLeft('Đã kết thúc');
+      setTimeLeft('Ended');
       return;
     }
 
@@ -61,13 +61,13 @@ export function VoteMessage({
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
     if (days > 0) {
-      setTimeLeft(`${days} ngày ${hours} giờ`);
+      setTimeLeft(`${days}d ${hours}h`);
     } else if (hours > 0) {
-      setTimeLeft(`${hours} giờ ${minutes} phút`);
+      setTimeLeft(`${hours}h ${minutes}m`);
     } else if (minutes > 0) {
-      setTimeLeft(`${minutes} phút ${seconds} giây`);
+      setTimeLeft(`${minutes}m ${seconds}s`);
     } else {
-      setTimeLeft(`${seconds} giây`);
+      setTimeLeft(`${seconds}s`);
     }
   }, [vote.expires_at]);
 
@@ -154,13 +154,13 @@ export function VoteMessage({
             <span className="text-sm font-medium text-gray-700 truncate">
               {creator?.username || 'Unknown'}
             </span>
-            <span className="text-xs text-gray-400">đã tạo bình chọn</span>
+            <span className="text-xs text-gray-400">created a poll</span>
           </div>
         </div>
         {vote.settings.anonymous && (
           <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
             <Lock className="w-3 h-3" />
-            Ẩn danh
+            Anonymous
           </div>
         )}
       </div>
@@ -169,7 +169,7 @@ export function VoteMessage({
       <div className="px-4 py-3 border-b border-gray-100">
         <h3 className="font-semibold text-gray-900">{vote.question}</h3>
         {vote.settings.allow_multiple && (
-          <p className="text-xs text-gray-500 mt-1">Có thể chọn nhiều đáp án</p>
+          <p className="text-xs text-gray-500 mt-1">Multiple choices allowed</p>
         )}
       </div>
 
@@ -218,7 +218,7 @@ export function VoteMessage({
             className="text-xs text-[#615EF0] hover:text-[#5048D9] font-medium flex items-center gap-1"
           >
             <RefreshCw className="w-3 h-3" />
-            Đổi vote
+            Change vote
           </button>
         )}
       </div>
