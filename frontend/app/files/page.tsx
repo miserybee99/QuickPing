@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Image, Film, Download, Trash2, Search, Filter, FolderOpen } from 'lucide-react';
+import { FileText, Image, Film, Download, Trash2, Search, Filter, FolderOpen, Loader2, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +14,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { PageHeader } from '@/components/layout';
 import { PageContainer, PageWrapper } from '@/components/layout';
+import { getFileUrl } from '@/lib/file-utils';
 
 interface FileItem {
   _id: string;
@@ -26,32 +27,17 @@ interface FileItem {
   created_at: Date;
 }
 
-// Mock data
-const mockFiles: FileItem[] = [
-  {
-    _id: '1',
-    name: 'presentation.pdf',
-    type: 'application/pdf',
-    size: 2500000,
-    url: '',
-    uploader: { _id: '1', username: 'nguyenvana' },
-    conversation: { _id: '1', name: 'Study Group' },
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-  {
-    _id: '2',
-    name: 'screenshot.png',
-    type: 'image/png',
-    size: 1200000,
-    url: '',
-    uploader: { _id: '2', username: 'tranthib' },
-    conversation: { _id: '2', name: 'Project Team' },
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 5),
-  },
-];
-
 export default function FilesPage() {
-  const [files] = useState(mockFiles);
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    // Files are loaded per conversation in the chat panel
+    // This page shows all files from user's conversations
+    // For now, show empty state - files are accessed within conversations
+    setLoading(false);
+    setFiles([]);
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
 
@@ -77,6 +63,23 @@ export default function FilesPage() {
       (filterType === 'documents' && !file.type.startsWith('image/') && !file.type.startsWith('video/'));
     return matchesSearch && matchesType;
   });
+
+  const handleDownload = (file: FileItem) => {
+    if (file.url) {
+      const downloadUrl = getFileUrl(file.url);
+      window.open(downloadUrl, '_blank');
+    }
+  };
+
+  if (loading) {
+    return (
+      <PageWrapper>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </PageWrapper>
+    );
+  }
 
   return (
     <PageWrapper>
@@ -122,6 +125,17 @@ export default function FilesPage() {
           {/* Grid View */}
           <TabsContent value="grid">
             <ScrollArea className="h-[700px]">
+              {filteredFiles.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <Inbox className="h-16 w-16 mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No files yet</p>
+                  <p className="text-sm text-center max-w-md">
+                    Files shared in your conversations will appear here.
+                    <br />
+                    Go to a chat and share some files to get started.
+                  </p>
+                </div>
+              ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredFiles.map((file) => {
                   const FileIcon = getFileIcon(file.type);
@@ -137,9 +151,9 @@ export default function FilesPage() {
                       <Card className="hover:shadow-lg transition-shadow">
                         <CardContent className="p-4">
                           <div className="aspect-square rounded-lg bg-muted flex items-center justify-center mb-3 relative overflow-hidden">
-                            {file.type.startsWith('image/') ? (
+                            {file.type.startsWith('image/') && file.url ? (
                               <img
-                                src={file.url || 'https://via.placeholder.com/200'}
+                                src={getFileUrl(file.url)}
                                 alt={file.name}
                                 className="w-full h-full object-cover"
                               />
@@ -147,7 +161,7 @@ export default function FilesPage() {
                               <FileIcon className="h-16 w-16 text-muted-foreground" />
                             )}
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              <Button size="sm" variant="secondary">
+                              <Button size="sm" variant="secondary" onClick={() => handleDownload(file)}>
                                 <Download className="h-4 w-4" />
                               </Button>
                               <Button size="sm" variant="destructive">
@@ -168,12 +182,24 @@ export default function FilesPage() {
                   );
                 })}
               </div>
+              )}
             </ScrollArea>
           </TabsContent>
 
           {/* List View */}
           <TabsContent value="list">
             <ScrollArea className="h-[700px]">
+              {filteredFiles.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <Inbox className="h-16 w-16 mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No files yet</p>
+                  <p className="text-sm text-center max-w-md">
+                    Files shared in your conversations will appear here.
+                    <br />
+                    Go to a chat and share some files to get started.
+                  </p>
+                </div>
+              ) : (
               <div className="space-y-2">
                 {filteredFiles.map((file) => {
                   const FileIcon = getFileIcon(file.type);
@@ -209,7 +235,7 @@ export default function FilesPage() {
                               </Badge>
                             </div>
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline">
+                              <Button size="sm" variant="outline" onClick={() => handleDownload(file)}>
                                 <Download className="h-4 w-4 mr-2" />
                                 Download
                               </Button>
@@ -224,6 +250,7 @@ export default function FilesPage() {
                   );
                 })}
               </div>
+              )}
             </ScrollArea>
           </TabsContent>
         </Tabs>

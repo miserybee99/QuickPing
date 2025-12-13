@@ -156,9 +156,13 @@ function LoginContent() {
                   <Label htmlFor="password" className="text-base font-medium">
                     Password
                   </Label>
-                  <a href="#" className="text-sm text-primary hover:underline">
+                  <button 
+                    type="button"
+                    onClick={() => alert('Password reset feature coming soon!')}
+                    className="text-sm text-primary hover:underline"
+                  >
                     Forgot password?
-                  </a>
+                  </button>
                 </div>
                 <div className="relative w-full">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none z-10" />

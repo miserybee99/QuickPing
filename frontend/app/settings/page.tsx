@@ -16,10 +16,31 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { PageHeader } from '@/components/layout';
 import { PageWrapper } from '@/components/layout';
 
+type Theme = 'light' | 'dark' | 'system';
+type FontSize = 'small' | 'medium' | 'large';
+
 export default function SettingsPage() {
   const router = useRouter();
   const { user } = useUser();
-  const { theme, setTheme, fontSize, setFontSize, resolvedTheme } = useTheme();
+  const { theme: savedTheme, setTheme: applySavedTheme, fontSize: savedFontSize, setFontSize: applySavedFontSize, resolvedTheme } = useTheme();
+  
+  // Pending (unsaved) settings - these are what user sees but not yet applied
+  const [pendingTheme, setPendingTheme] = useState<Theme>(savedTheme);
+  const [pendingFontSize, setPendingFontSize] = useState<FontSize>(savedFontSize);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Sync pending state with saved state on mount
+  useEffect(() => {
+    setPendingTheme(savedTheme);
+    setPendingFontSize(savedFontSize);
+  }, [savedTheme, savedFontSize]);
+  
+  // Track unsaved changes
+  useEffect(() => {
+    const themeChanged = pendingTheme !== savedTheme;
+    const fontSizeChanged = pendingFontSize !== savedFontSize;
+    setHasUnsavedChanges(themeChanged || fontSizeChanged);
+  }, [pendingTheme, pendingFontSize, savedTheme, savedFontSize]);
   
   // Notification states
   const [notifications, setNotifications] = useState({
@@ -93,13 +114,24 @@ export default function SettingsPage() {
   const handleSavePreferences = async () => {
     try {
       setSaving(true);
+      
+      // Apply pending appearance changes
+      if (pendingTheme !== savedTheme) {
+        applySavedTheme(pendingTheme);
+      }
+      if (pendingFontSize !== savedFontSize) {
+        applySavedFontSize(pendingFontSize);
+      }
+      
+      // Save to backend
       await apiClient.users.updatePreferences({
-        theme,
-        font_size: fontSize,
+        theme: pendingTheme,
+        font_size: pendingFontSize,
         notifications,
         privacy,
       });
       
+      setHasUnsavedChanges(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
@@ -108,6 +140,16 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+  
+  const handleResetAppearance = () => {
+    setPendingTheme(savedTheme);
+    setPendingFontSize(savedFontSize);
+  };
+  
+  const handleResetToDefaults = () => {
+    setPendingTheme('system');
+    setPendingFontSize('medium');
   };
 
   const handleLogout = () => {
@@ -167,45 +209,51 @@ export default function SettingsPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div
                   className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    theme === 'light'
+                    pendingTheme === 'light'
                       ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-muted-foreground/50'
                   }`}
-                  onClick={() => setTheme('light')}
+                  onClick={() => setPendingTheme('light')}
                 >
-                  <Sun className={`w-6 h-6 ${theme === 'light' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm font-medium ${theme === 'light' ? 'text-primary' : ''}`}>Light</span>
+                  <Sun className={`w-6 h-6 ${pendingTheme === 'light' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className={`text-sm font-medium ${pendingTheme === 'light' ? 'text-primary' : ''}`}>Light</span>
                 </div>
                 
                 <div
                   className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    theme === 'dark'
+                    pendingTheme === 'dark'
                       ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-muted-foreground/50'
                   }`}
-                  onClick={() => setTheme('dark')}
+                  onClick={() => setPendingTheme('dark')}
                 >
-                  <Moon className={`w-6 h-6 ${theme === 'dark' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-primary' : ''}`}>Dark</span>
+                  <Moon className={`w-6 h-6 ${pendingTheme === 'dark' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className={`text-sm font-medium ${pendingTheme === 'dark' ? 'text-primary' : ''}`}>Dark</span>
                 </div>
                 
                 <div
                   className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    theme === 'system'
+                    pendingTheme === 'system'
                       ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-muted-foreground/50'
                   }`}
-                  onClick={() => setTheme('system')}
+                  onClick={() => setPendingTheme('system')}
                 >
-                  <Monitor className={`w-6 h-6 ${theme === 'system' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm font-medium ${theme === 'system' ? 'text-primary' : ''}`}>System</span>
+                  <Monitor className={`w-6 h-6 ${pendingTheme === 'system' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className={`text-sm font-medium ${pendingTheme === 'system' ? 'text-primary' : ''}`}>System</span>
                 </div>
               </div>
               
-              {theme === 'system' && (
+              {pendingTheme === 'system' && (
                 <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
                   Theme will automatically change based on your system settings.
                   Currently using {resolvedTheme === 'dark' ? 'dark' : 'light'} mode.
+                </p>
+              )}
+              
+              {hasUnsavedChanges && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 p-3 rounded-lg">
+                  ⚠️ You have unsaved changes. Click "Save Changes" to apply.
                 </p>
               )}
             </CardContent>
@@ -226,43 +274,43 @@ export default function SettingsPage() {
               <div className="space-y-3">
                 <div
                   className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    fontSize === 'small'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                      : 'border-gray-200 hover:border-gray-300'
+                    pendingFontSize === 'small'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-muted-foreground/50'
                   }`}
-                  onClick={() => setFontSize('small')}
+                  onClick={() => setPendingFontSize('small')}
                 >
                   <span className="text-sm">Small (14px)</span>
                   <div className={`w-4 h-4 rounded-full border-2 ${
-                    fontSize === 'small' ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                    pendingFontSize === 'small' ? 'bg-primary border-primary' : 'border-muted-foreground'
                   }`}></div>
                 </div>
 
                 <div
                   className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    fontSize === 'medium'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                      : 'border-gray-200 hover:border-gray-300'
+                    pendingFontSize === 'medium'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-muted-foreground/50'
                   }`}
-                  onClick={() => setFontSize('medium')}
+                  onClick={() => setPendingFontSize('medium')}
                 >
                   <span className="text-base">Medium (16px)</span>
                   <div className={`w-4 h-4 rounded-full border-2 ${
-                    fontSize === 'medium' ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                    pendingFontSize === 'medium' ? 'bg-primary border-primary' : 'border-muted-foreground'
                   }`}></div>
                 </div>
 
                 <div
                   className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    fontSize === 'large'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                      : 'border-gray-200 hover:border-gray-300'
+                    pendingFontSize === 'large'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-muted-foreground/50'
                   }`}
-                  onClick={() => setFontSize('large')}
+                  onClick={() => setPendingFontSize('large')}
                 >
                   <span className="text-lg">Large (18px)</span>
                   <div className={`w-4 h-4 rounded-full border-2 ${
-                    fontSize === 'large' ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                    pendingFontSize === 'large' ? 'bg-primary border-primary' : 'border-muted-foreground'
                   }`}></div>
                 </div>
               </div>
@@ -284,14 +332,18 @@ export default function SettingsPage() {
           <div className="flex justify-end gap-3">
             <Button
               variant="outline"
-              onClick={() => {
-                setTheme('system');
-                setFontSize('medium');
-              }}
+              onClick={handleResetAppearance}
+              disabled={!hasUnsavedChanges}
             >
-              Reset
+              Discard Changes
             </Button>
-            <Button onClick={handleSavePreferences} disabled={saving}>
+            <Button
+              variant="outline"
+              onClick={handleResetToDefaults}
+            >
+              Reset to Defaults
+            </Button>
+            <Button onClick={handleSavePreferences} disabled={saving || !hasUnsavedChanges}>
               {saving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}
             </Button>
           </div>

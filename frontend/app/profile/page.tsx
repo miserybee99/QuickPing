@@ -13,8 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUser } from '@/hooks/useUser';
 import { apiClient } from '@/lib/api-client';
 import { AvatarUploadDropzone } from '@/components/profile/avatar-upload-dropzone';
-import { PageHeader } from '@/components/layout';
-import { PageContainer, PageWrapper } from '@/components/layout';
+import { PageHeader, PageContainer, PageWrapper, PageScrollArea } from '@/components/layout';
 
 export default function ProfilePage() {
   const { user } = useUser();
@@ -111,7 +110,8 @@ export default function ProfilePage() {
         }
       />
 
-      <PageContainer maxWidth="lg">
+      <PageScrollArea>
+        <PageContainer maxWidth="lg">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -246,7 +246,8 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
             </motion.div>
-      </PageContainer>
+        </PageContainer>
+      </PageScrollArea>
     </PageWrapper>
   );
 }

@@ -59,7 +59,25 @@ export function PageWrapper({
   className?: string;
 }) {
   return (
-    <div className={cn('h-full flex flex-col bg-background', className)}>
+    <div className={cn('h-full flex flex-col bg-background overflow-hidden', className)}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Scrollable content area within PageWrapper
+ * Use this after PageHeader to create scrollable content
+ */
+export function PageScrollArea({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn('flex-1 overflow-y-auto overflow-x-hidden', className)}>
       {children}
     </div>
   );
