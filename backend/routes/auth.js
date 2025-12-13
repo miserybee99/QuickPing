@@ -154,6 +154,47 @@ router.post('/login', [
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
           });
           await session.save();
+          
+          // Check if email verification is required
+          if (!userCaseInsensitive.is_verified) {
+            console.log('📧 User not verified, sending OTP to:', userCaseInsensitive.email);
+            
+            await OTP.deleteMany({ email: userCaseInsensitive.email });
+            
+            const otp = OTP.generateOTP();
+            const otpHash = await bcrypt.hash(otp, 10);
+            
+            const otpDoc = new OTP({
+              user_id: userCaseInsensitive._id,
+              email: userCaseInsensitive.email,
+              otp_hash: otpHash,
+              expires_at: OTP.getExpiryTime()
+            });
+            await otpDoc.save();
+            
+            try {
+              await sendOTPEmail(userCaseInsensitive.email, userCaseInsensitive.username, otp);
+            } catch (emailError) {
+              console.error('Failed to send verification email:', emailError);
+            }
+            
+            return res.json({
+              token,
+              requireVerification: true,
+              user: {
+                _id: userCaseInsensitive._id,
+                email: userCaseInsensitive.email,
+                username: userCaseInsensitive.username,
+                mssv: userCaseInsensitive.mssv,
+                avatar_url: userCaseInsensitive.avatar_url,
+                bio: userCaseInsensitive.bio,
+                role: userCaseInsensitive.role,
+                is_verified: userCaseInsensitive.is_verified,
+                preferences: userCaseInsensitive.preferences
+              }
+            });
+          }
+          
           return res.json({
             token,
             user: {
@@ -208,6 +249,50 @@ router.post('/login', [
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     });
     await session.save();
+
+    // Check if email verification is required
+    if (!user.is_verified) {
+      console.log('📧 User not verified, sending OTP to:', user.email);
+      
+      // Delete existing OTPs for this user
+      await OTP.deleteMany({ email: user.email });
+      
+      // Generate and send new OTP
+      const otp = OTP.generateOTP();
+      const otpHash = await bcrypt.hash(otp, 10);
+      
+      const otpDoc = new OTP({
+        user_id: user._id,
+        email: user.email,
+        otp_hash: otpHash,
+        expires_at: OTP.getExpiryTime()
+      });
+      await otpDoc.save();
+      
+      // Send OTP email
+      try {
+        await sendOTPEmail(user.email, user.username, otp);
+        console.log('✅ Verification OTP sent to:', user.email);
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+      }
+      
+      return res.json({
+        token,
+        requireVerification: true,
+        user: {
+          _id: user._id,
+          email: user.email,
+          username: user.username,
+          mssv: user.mssv,
+          avatar_url: user.avatar_url,
+          bio: user.bio,
+          role: user.role,
+          is_verified: user.is_verified,
+          preferences: user.preferences
+        }
+      });
+    }
 
     res.json({
       token,
