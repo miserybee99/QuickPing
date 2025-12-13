@@ -37,6 +37,12 @@ services:
       - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/quickping}
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       - CORS_ORIGIN=http://localhost:3000
+      # Cloudinary Configuration (Required for production)
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      # AI Configuration (Gemini)
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     depends_on:
       mongodb:
         condition: service_healthy

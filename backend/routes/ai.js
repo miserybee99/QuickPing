@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import { authenticate } from '../middleware/auth.js';
+import { isGeminiConfigured, getGeminiModel } from '../config/gemini.js';
 
 const router = express.Router();
 
@@ -14,6 +15,9 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const rateLimits = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 10; // 10 requests per minute per user
+
+// Message limit for summarization
+const MAX_MESSAGES = 50;
 
 function checkRateLimit(userId) {
   const now = Date.now();
@@ -64,73 +68,90 @@ function setCachedSummary(conversationId, summary, lastMessageTime) {
   });
 }
 
-// Call OpenAI API
-async function callOpenAI(messages, conversationText) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  
-  if (!apiKey) {
-    console.warn('OPENAI_API_KEY not set, using placeholder summary');
-    return generatePlaceholderSummary(messages);
-  }
+// Build the enhanced prompt for better summarization
+function buildSummarizationPrompt(conversationText, messageCount, participantNames) {
+  return `Bạn là AI assistant chuyên phân tích và tóm tắt cuộc trò chuyện một cách CHI TIẾT và CỤ THỂ.
 
-  const prompt = `You are a helpful assistant that summarizes chat conversations in Vietnamese.
+## THÔNG TIN CUỘC TRÒ CHUYỆN:
+- Số tin nhắn: ${messageCount}
+- Người tham gia: ${participantNames.join(', ')}
 
-Given the following conversation between users:
+## NỘI DUNG CUỘC TRÒ CHUYỆN:
 ${conversationText}
 
-Please provide:
-1. A concise summary in Vietnamese (2-3 paragraphs)
-2. Key points in Vietnamese (bullet list, 3-5 items)
-3. Action items if any (with @mentions if users are assigned tasks)
+## NHIỆM VỤ:
+Phân tích cuộc trò chuyện trên và tạo tóm tắt CHI TIẾT theo cấu trúc sau:
 
-IMPORTANT: Respond in Vietnamese language.
+1. **PHÂN LOẠI CHỦ ĐỀ**: Xác định TẤT CẢ các chủ đề được thảo luận (ví dụ: công việc, dự án, lịch họp, vấn đề kỹ thuật, trò chuyện casual, etc.)
 
-Format your response as JSON (no markdown code blocks):
+2. **TÓM TẮT THEO CHỦ ĐỀ**: Với MỖI chủ đề, cung cấp:
+   - Tên chủ đề
+   - Nội dung cụ thể được thảo luận
+   - Ai là người tham gia chính trong chủ đề đó
+   - Kết luận/Quyết định (nếu có)
+
+3. **TÓM TẮT TỔNG QUAN**: 2-3 câu mô tả ngắn gọn toàn bộ cuộc trò chuyện
+
+4. **QUYẾT ĐỊNH QUAN TRỌNG**: Liệt kê những quyết định đã được đưa ra (nếu có)
+
+5. **VIỆC CẦN LÀM**: Action items với người được giao (nếu có)
+
+## YÊU CẦU:
+- Trả lời bằng tiếng Việt
+- Tóm tắt phải CỤ THỂ, không chung chung
+- Nêu rõ AI NÓI GÌ, QUYẾT ĐỊNH GÌ
+- Format output là JSON hợp lệ (không có markdown code blocks)
+
+## OUTPUT FORMAT (JSON):
 {
-  "summary": "...",
-  "keyPoints": ["...", "..."],
-  "actionItems": [
-    {"assignee": "@username", "task": "..."}
+  "topics": [
+    {
+      "name": "Tên chủ đề",
+      "summary": "Nội dung chi tiết được thảo luận về chủ đề này...",
+      "participants": ["@user1", "@user2"],
+      "conclusion": "Kết luận hoặc quyết định (nếu có, không thì để null)"
+    }
+  ],
+  "overall_summary": "Tóm tắt tổng quan 2-3 câu về toàn bộ cuộc trò chuyện...",
+  "key_decisions": ["Quyết định 1", "Quyết định 2"],
+  "action_items": [
+    {"assignee": "@username", "task": "Mô tả công việc cần làm"}
   ]
 }
 
-If there are no clear action items, return an empty array for actionItems.`;
+Nếu không có quyết định hoặc action items, trả về mảng rỗng [].
+Nếu chỉ có 1 chủ đề, vẫn phải trả về trong mảng topics.`;
+}
+
+// Call Gemini API
+async function callGemini(messages, conversationText) {
+  if (!isGeminiConfigured()) {
+    console.warn('GEMINI_API_KEY not set, using placeholder summary');
+    return generatePlaceholderSummary(messages);
+  }
+
+  // Get participant names
+  const participantNames = [...new Set(messages.map(m => m.sender_id?.username).filter(Boolean))];
+  
+  const prompt = buildSummarizationPrompt(conversationText, messages.length, participantNames);
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that summarizes chat conversations. Always respond in Vietnamese and return valid JSON.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
+    const model = getGeminiModel('gemini-2.5-flash');
+    
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
         temperature: 0.3,
-        max_tokens: 1000
-      })
+        maxOutputTokens: 2000,
+        responseMimeType: 'application/json'
+      }
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('OpenAI API error:', response.status, errorData);
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const response = await result.response;
+    const content = response.text();
 
     if (!content) {
-      throw new Error('No content in OpenAI response');
+      throw new Error('No content in Gemini response');
     }
 
     // Parse JSON response
@@ -138,27 +159,40 @@ If there are no clear action items, return an empty array for actionItems.`;
       // Remove markdown code blocks if present
       const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const parsed = JSON.parse(cleanContent);
+      
+      // Validate and normalize the response
       return {
-        summary: parsed.summary || '',
-        keyPoints: parsed.keyPoints || [],
-        actionItems: parsed.actionItems || []
+        topics: Array.isArray(parsed.topics) ? parsed.topics : [],
+        overall_summary: parsed.overall_summary || '',
+        key_decisions: Array.isArray(parsed.key_decisions) ? parsed.key_decisions : [],
+        action_items: Array.isArray(parsed.action_items) ? parsed.action_items : [],
+        // Legacy fields for backward compatibility
+        summary: parsed.overall_summary || '',
+        keyPoints: Array.isArray(parsed.topics) 
+          ? parsed.topics.map(t => `${t.name}: ${t.summary?.substring(0, 100)}...`)
+          : [],
+        actionItems: Array.isArray(parsed.action_items) ? parsed.action_items : []
       };
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', content);
+      console.error('Failed to parse Gemini response:', content);
       // Return raw content as summary if JSON parsing fails
       return {
+        topics: [],
+        overall_summary: content,
+        key_decisions: [],
+        action_items: [],
         summary: content,
         keyPoints: [],
         actionItems: []
       };
     }
   } catch (error) {
-    console.error('OpenAI API call failed:', error);
+    console.error('Gemini API call failed:', error);
     throw error;
   }
 }
 
-// Generate placeholder summary when OpenAI is not available
+// Generate placeholder summary when Gemini is not available
 function generatePlaceholderSummary(messages) {
   const participants = [...new Set(messages.map(m => m.sender_id?.username).filter(Boolean))];
   const messageCount = messages.length;
@@ -168,18 +202,44 @@ function generatePlaceholderSummary(messages) {
   const messageTexts = messages.map(m => m.content?.toLowerCase() || '').join(' ');
   
   // Detect common topics (Vietnamese keywords)
-  if (messageTexts.includes('họp') || messageTexts.includes('meeting')) topics.push('cuộc họp');
-  if (messageTexts.includes('project') || messageTexts.includes('dự án')) topics.push('dự án');
-  if (messageTexts.includes('deadline') || messageTexts.includes('hạn')) topics.push('deadline');
-  if (messageTexts.includes('bug') || messageTexts.includes('lỗi')) topics.push('issues/bugs');
-  if (messageTexts.includes('review') || messageTexts.includes('đánh giá')) topics.push('review');
+  if (messageTexts.includes('họp') || messageTexts.includes('meeting')) {
+    topics.push({ name: 'Cuộc họp', summary: 'Thảo luận về cuộc họp', participants });
+  }
+  if (messageTexts.includes('project') || messageTexts.includes('dự án')) {
+    topics.push({ name: 'Dự án', summary: 'Thảo luận về dự án', participants });
+  }
+  if (messageTexts.includes('deadline') || messageTexts.includes('hạn')) {
+    topics.push({ name: 'Deadline', summary: 'Thảo luận về deadline', participants });
+  }
+  if (messageTexts.includes('bug') || messageTexts.includes('lỗi')) {
+    topics.push({ name: 'Issues/Bugs', summary: 'Thảo luận về lỗi/vấn đề', participants });
+  }
+  if (messageTexts.includes('review') || messageTexts.includes('đánh giá')) {
+    topics.push({ name: 'Review', summary: 'Thảo luận về review', participants });
+  }
+  
+  // If no specific topics detected, add a general one
+  if (topics.length === 0) {
+    topics.push({ 
+      name: 'Trò chuyện chung', 
+      summary: 'Cuộc trò chuyện bao gồm nhiều chủ đề khác nhau', 
+      participants 
+    });
+  }
+  
+  const overallSummary = `Cuộc trò chuyện này có ${messageCount} tin nhắn từ ${participants.length} người tham gia (${participants.join(', ')}). ${topics.length > 0 ? `Các chủ đề được đề cập: ${topics.map(t => t.name).join(', ')}.` : ''}`;
   
   return {
-    summary: `Cuộc trò chuyện này có ${messageCount} tin nhắn từ ${participants.length} người tham gia (${participants.join(', ')}). ${topics.length > 0 ? `Các chủ đề được đề cập: ${topics.join(', ')}.` : 'Nội dung bao gồm nhiều chủ đề khác nhau.'}`,
+    topics,
+    overall_summary: overallSummary,
+    key_decisions: [],
+    action_items: [],
+    // Legacy fields
+    summary: overallSummary,
     keyPoints: [
       `${messageCount} tin nhắn tổng cộng`,
       `${participants.length} người tham gia`,
-      topics.length > 0 ? `Chủ đề chính: ${topics.join(', ')}` : 'Nhiều chủ đề được thảo luận'
+      topics.length > 0 ? `Chủ đề chính: ${topics.map(t => t.name).join(', ')}` : 'Nhiều chủ đề được thảo luận'
     ],
     actionItems: []
   };
@@ -224,7 +284,11 @@ router.post('/summarize', authenticate, [
         ]
       })
       .populate('sender_id', 'username')
-      .sort({ created_at: 1 });
+      .sort({ created_at: -1 }) // Sort descending to get newest first
+      .limit(MAX_MESSAGES);
+      
+      // Reverse to get chronological order for summarization
+      messages = messages.reverse();
     } else if (conversation_id) {
       // Check access first
       conversation = await Conversation.findById(conversation_id);
@@ -238,10 +302,14 @@ router.post('/summarize', authenticate, [
         return res.status(403).json({ error: 'Bạn không có quyền truy cập cuộc trò chuyện này' });
       }
 
+      // Get only the latest MAX_MESSAGES messages
       messages = await Message.find({ conversation_id })
         .populate('sender_id', 'username')
-        .sort({ created_at: 1 })
-        .limit(500); // Limit to prevent context overflow
+        .sort({ created_at: -1 }) // Sort descending to get newest first
+        .limit(MAX_MESSAGES);
+      
+      // Reverse to get chronological order for summarization
+      messages = messages.reverse();
     } else if (thread_id) {
       // Thread without explicit type
       messages = await Message.find({
@@ -251,7 +319,10 @@ router.post('/summarize', authenticate, [
         ]
       })
       .populate('sender_id', 'username')
-      .sort({ created_at: 1 });
+      .sort({ created_at: -1 })
+      .limit(MAX_MESSAGES);
+      
+      messages = messages.reverse();
     } else {
       return res.status(400).json({ error: 'Thiếu thông tin cuộc trò chuyện' });
     }
@@ -291,18 +362,21 @@ router.post('/summarize', authenticate, [
       .map(m => {
         const username = m.sender_id?.username || 'Unknown';
         const content = m.content || '[File/Media]';
+        const timestamp = new Date(m.created_at).toLocaleString('vi-VN');
         // Filter out potential PII patterns (emails, phone numbers)
         const filteredContent = content
           .replace(/[\w.-]+@[\w.-]+\.\w+/g, '[email]')
           .replace(/\b\d{10,}\b/g, '[phone]');
-        return `${username}: ${filteredContent}`;
+        return `[${timestamp}] ${username}: ${filteredContent}`;
       })
       .join('\n');
 
     // Call AI
     let summary;
     try {
-      summary = await callOpenAI(messages, conversationText);
+      console.log(`🤖 Calling Gemini AI for ${messages.length} messages...`);
+      summary = await callGemini(messages, conversationText);
+      console.log('✅ Gemini AI summary generated successfully');
     } catch (aiError) {
       console.error('AI error, using placeholder:', aiError);
       summary = generatePlaceholderSummary(messages);
@@ -330,4 +404,3 @@ export function invalidateSummaryCache(conversationId) {
 }
 
 export default router;
-

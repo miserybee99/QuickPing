@@ -175,7 +175,21 @@ JWT_SECRET=your-super-secret-jwt-key
 JWT_EXPIRES_IN=7d
 FRONTEND_URL=http://localhost:3000
 NODE_ENV=development
+
+# Cloudinary (Optional for dev, Required for production)
+# Get credentials from: https://cloudinary.com/console
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
+
+### File Storage
+
+QuickPing supports two storage modes:
+- **Local Storage** (default): Files saved to `backend/uploads/`
+- **Cloudinary** (recommended for production): Files uploaded to Cloudinary CDN
+
+When `CLOUDINARY_*` env vars are set, Cloudinary is automatically used. Otherwise, falls back to local storage.
 
 ### Frontend (.env.local)
 ```env
