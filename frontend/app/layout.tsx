@@ -5,6 +5,7 @@ import { SocketProvider } from '@/contexts/SocketContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { UserStatusProvider } from '@/contexts/UserStatusContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import LayoutContent from './layout-content';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -44,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
@@ -53,7 +54,9 @@ export default function RootLayout({
           <SocketProvider>
             <SidebarProvider>
               <UserStatusProvider>
-                <LayoutContent>{children}</LayoutContent>
+                <NotificationProvider>
+                  <LayoutContent>{children}</LayoutContent>
+                </NotificationProvider>
               </UserStatusProvider>
             </SidebarProvider>
           </SocketProvider>

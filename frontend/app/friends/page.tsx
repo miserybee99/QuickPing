@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { User } from '@/types';
 import { useUserStatus } from '@/contexts/UserStatusContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { PageHeader } from '@/components/layout';
 import { PageContainer, PageWrapper } from '@/components/layout';
 
@@ -27,6 +28,7 @@ interface FriendRequest {
 export default function FriendsPage() {
   const router = useRouter();
   const { isUserOnline } = useUserStatus();
+  const { refreshCounts } = useNotifications();
   const [searchQuery, setSearchQuery] = useState('');
   const [friends, setFriends] = useState<User[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -61,6 +63,7 @@ export default function FriendsPage() {
     try {
       await apiClient.friends.acceptRequest(friendshipId);
       await loadData(); // Reload
+      refreshCounts(); // Update notification badges
     } catch (error) {
       console.error('Error accepting request:', error);
     } finally {
@@ -73,6 +76,7 @@ export default function FriendsPage() {
     try {
       await apiClient.friends.rejectRequest(friendshipId);
       setRequests(requests.filter((r) => r._id !== friendshipId));
+      refreshCounts(); // Update notification badges
     } catch (error) {
       console.error('Error rejecting request:', error);
     } finally {

@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUser } from '@/hooks/useUser';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 // Main navigation items
 const mainNavigation = [
@@ -38,9 +39,10 @@ interface NavItemProps {
     icon: LucideIcon;
   };
   isActive: boolean;
+  badge?: number;
 }
 
-function NavItem({ item, isActive }: NavItemProps) {
+function NavItem({ item, isActive, badge }: NavItemProps) {
   const Icon = item.icon;
   
   return (
@@ -56,6 +58,13 @@ function NavItem({ item, isActive }: NavItemProps) {
     >
       <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
       
+      {/* Notification badge */}
+      {badge !== undefined && badge > 0 && (
+        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-sm">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+      
       {/* Active indicator */}
       {isActive && (
         <span className="absolute -left-[22px] w-1 h-8 bg-primary rounded-r-full" />
@@ -64,6 +73,11 @@ function NavItem({ item, isActive }: NavItemProps) {
       {/* Tooltip */}
       <span className="absolute left-full ml-4 px-3 py-2 bg-popover text-popover-foreground text-sm font-medium rounded-lg shadow-lg border border-border opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity duration-200">
         {item.name}
+        {badge !== undefined && badge > 0 && (
+          <span className="ml-2 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full">
+            {badge}
+          </span>
+        )}
       </span>
     </Link>
   );
@@ -72,6 +86,7 @@ function NavItem({ item, isActive }: NavItemProps) {
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useUser();
+  const { counts } = useNotifications();
 
   // Don't show sidebar on login/register pages
   if (pathname === '/login' || pathname === '/register') {
@@ -81,6 +96,18 @@ export function Sidebar() {
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
+  };
+
+  // Get badge count for specific navigation items
+  const getBadgeCount = (href: string): number | undefined => {
+    switch (href) {
+      case '/friends':
+        return counts.friendRequests;
+      case '/notifications':
+        return counts.total;
+      default:
+        return undefined;
+    }
   };
 
   return (
@@ -104,7 +131,8 @@ export function Sidebar() {
             <NavItem 
               key={item.name} 
               item={item} 
-              isActive={isActive(item.href)} 
+              isActive={isActive(item.href)}
+              badge={getBadgeCount(item.href)}
             />
           ))}
         </nav>
@@ -118,7 +146,8 @@ export function Sidebar() {
             <NavItem 
               key={item.name} 
               item={item} 
-              isActive={isActive(item.href)} 
+              isActive={isActive(item.href)}
+              badge={getBadgeCount(item.href)}
             />
           ))}
         </nav>
