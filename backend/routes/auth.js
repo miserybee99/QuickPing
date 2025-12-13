@@ -251,6 +251,12 @@ router.post('/login', [
     await session.save();
 
     // Check if email verification is required
+    console.log('🔍 Checking verification status:', { 
+      userId: user._id, 
+      email: user.email, 
+      is_verified: user.is_verified 
+    });
+    
     if (!user.is_verified) {
       console.log('📧 User not verified, sending OTP to:', user.email);
       
