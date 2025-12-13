@@ -1,8 +1,9 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
+import { Loader2 } from 'lucide-react';
 
 export default function LayoutContent({
   children,
@@ -10,8 +11,13 @@ export default function LayoutContent({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const router = useRouter();
+  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   
+  // Pages that don't require authentication (public pages)
+  const publicPages = ['/login', '/register', '/verify-email', '/auth/callback'];
+  const isPublicPage = publicPages.some(page => pathname.startsWith(page));
+
   // Check authentication status
   useEffect(() => {
     const checkAuth = () => {
@@ -22,12 +28,20 @@ export default function LayoutContent({
         try {
           const userData = JSON.parse(user);
           // User must be verified to access main app
-          setIsAuthenticated(userData.is_verified === true);
+          if (userData.is_verified === true) {
+            setAuthState('authenticated');
+          } else {
+            // User logged in but not verified - redirect to verify
+            setAuthState('unauthenticated');
+            if (!isPublicPage) {
+              router.replace(`/verify-email?email=${encodeURIComponent(userData.email || '')}`);
+            }
+          }
         } catch {
-          setIsAuthenticated(false);
+          setAuthState('unauthenticated');
         }
       } else {
-        setIsAuthenticated(false);
+        setAuthState('unauthenticated');
       }
     };
     
@@ -36,20 +50,36 @@ export default function LayoutContent({
     // Listen for storage changes (login/logout in other tabs)
     window.addEventListener('storage', checkAuth);
     return () => window.removeEventListener('storage', checkAuth);
-  }, [pathname]);
-  
-  // Pages that should NEVER have sidebar (auth flow pages)
-  const authFlowPages = ['/login', '/register', '/verify-email', '/auth/callback'];
-  const isAuthFlowPage = authFlowPages.some(page => pathname.startsWith(page));
+  }, [pathname, isPublicPage, router]);
 
-  // Show full-screen layout for auth pages OR when not authenticated
-  if (isAuthFlowPage || isAuthenticated === false) {
+  // Redirect unauthenticated users to login (except on public pages)
+  useEffect(() => {
+    if (authState === 'unauthenticated' && !isPublicPage) {
+      router.replace('/login');
+    }
+  }, [authState, isPublicPage, router]);
+
+  // Show loading spinner while checking auth
+  if (authState === 'loading') {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Public pages - show without sidebar
+  if (isPublicPage) {
     return <div className="h-screen w-screen overflow-auto">{children}</div>;
   }
   
-  // Still loading auth state - show loading or children without sidebar
-  if (isAuthenticated === null) {
-    return <div className="h-screen w-screen overflow-auto">{children}</div>;
+  // Not authenticated and not on public page - show loading while redirecting
+  if (authState === 'unauthenticated') {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   // Authenticated user - show sidebar layout
