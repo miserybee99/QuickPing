@@ -123,7 +123,43 @@ function ImageMessage({
 }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
-  const imageUrl = getFileUrl(fileInfo.url || `/api/files/${fileInfo.file_id}/download`);
+  
+  // Build image URL - handle both Cloudinary and local URLs
+  const rawUrl = fileInfo.url || '';
+  const isCloudinaryUrl = rawUrl.includes('cloudinary.com') || rawUrl.includes('res.cloudinary.com');
+  const isLocalUrl = rawUrl.startsWith('/uploads/');
+  
+  // For Cloudinary URLs, use directly. For others, route through backend
+  let imageUrl: string;
+  if (isCloudinaryUrl) {
+    imageUrl = rawUrl;
+  } else if (isLocalUrl) {
+    // Local uploads - route through backend
+    imageUrl = getFileUrl(rawUrl);
+  } else if (fileInfo.file_id) {
+    // Fallback to download endpoint
+    const fileId = typeof fileInfo.file_id === 'object' 
+      ? (fileInfo.file_id as any)?._id || (fileInfo.file_id as any)?.url
+      : fileInfo.file_id;
+    // If file_id is actually a populated File object with url
+    if (typeof fileInfo.file_id === 'object' && (fileInfo.file_id as any)?.url) {
+      imageUrl = (fileInfo.file_id as any).url;
+    } else {
+      imageUrl = getFileUrl(`/api/files/${fileId}/download`);
+    }
+  } else {
+    imageUrl = getFileUrl(rawUrl);
+  }
+  
+  // Debug logging
+  console.log('🖼️ ImageMessage URL:', { 
+    rawUrl, 
+    imageUrl, 
+    isCloudinaryUrl, 
+    isLocalUrl,
+    file_id: fileInfo.file_id,
+    filename: fileInfo.filename 
+  });
 
   if (error) {
     return (
