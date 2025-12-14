@@ -5,29 +5,56 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Moon, Sun, Type, Bell, Lock, User as UserIcon, X, Monitor, BellRing, BellOff, Settings } from 'lucide-react';
+import { Moon, Sun, Type, Bell, Lock, User as UserIcon, X, Monitor, BellRing, BellOff, Settings, Save, Loader2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useUser } from '@/hooks/useUser';
 import { useTheme } from '@/contexts/ThemeContext';
 import { PageHeader } from '@/components/layout';
 import { PageWrapper } from '@/components/layout';
+import { AvatarUploadDropzone } from '@/components/profile/avatar-upload-dropzone';
+import { Badge } from '@/components/ui/badge';
 
 type Theme = 'light' | 'dark' | 'system';
 type FontSize = 'small' | 'medium' | 'large';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, updateUser } = useUser();
   const { theme: savedTheme, setTheme: applySavedTheme, fontSize: savedFontSize, setFontSize: applySavedFontSize, resolvedTheme } = useTheme();
+  
+  // Profile state
+  const [profile, setProfile] = useState({
+    username: '',
+    email: '',
+    bio: '',
+    avatar_url: '',
+    mssv: '',
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
   
   // Pending (unsaved) settings - these are what user sees but not yet applied
   const [pendingTheme, setPendingTheme] = useState<Theme>(savedTheme);
   const [pendingFontSize, setPendingFontSize] = useState<FontSize>(savedFontSize);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Load profile data
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        username: user.username || '',
+        email: user.email || '',
+        bio: user.bio || '',
+        avatar_url: user.avatar_url || '',
+        mssv: user.mssv || '',
+      });
+    }
+  }, [user]);
   
   // Sync pending state with saved state on mount
   useEffect(() => {
@@ -111,6 +138,44 @@ export default function SettingsPage() {
     }
   };
 
+  // Handle avatar upload
+  const handleAvatarUpload = async (url: string) => {
+    setProfile(prev => ({ ...prev, avatar_url: url }));
+    
+    try {
+      await apiClient.users.updateProfile({ avatar_url: url });
+      if (user) {
+        updateUser({ ...user, avatar_url: url });
+      }
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      setProfile(prev => ({ ...prev, avatar_url: user?.avatar_url || '' }));
+    }
+  };
+
+  // Handle save profile
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      await apiClient.users.updateProfile({
+        username: profile.username,
+        bio: profile.bio,
+        avatar_url: profile.avatar_url,
+      });
+      
+      if (user) {
+        updateUser({ ...user, ...profile });
+      }
+      
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Could not update profile. Please try again.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const handleSavePreferences = async () => {
     try {
       setSaving(true);
@@ -182,13 +247,112 @@ export default function SettingsPage() {
 
       <ScrollArea className="flex-1">
         <div className="container max-w-4xl mx-auto py-6 px-4 sm:px-6">
-          <Tabs defaultValue="appearance" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
+
+        {/* ====================================================================== */}
+        {/* PROFILE TAB */}
+        {/* ====================================================================== */}
+        <TabsContent value="profile" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserIcon className="w-5 h-5" />
+                Profile Information
+              </CardTitle>
+              <CardDescription>
+                Update your personal information and avatar
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Avatar Upload */}
+              <div className="space-y-4">
+                <Label>Avatar</Label>
+                <AvatarUploadDropzone
+                  currentAvatarUrl={profile.avatar_url}
+                  onAvatarChange={handleAvatarUpload}
+                  username={profile.username}
+                />
+              </div>
+
+              <Separator />
+
+              {/* Username */}
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  value={profile.username}
+                  onChange={(e) => setProfile(prev => ({ ...prev, username: e.target.value }))}
+                  placeholder="Your username"
+                />
+              </div>
+
+              {/* Email (read-only) */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={profile.email}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Email cannot be changed
+                </p>
+              </div>
+
+              {/* MSSV (read-only) */}
+              {profile.mssv && (
+                <div className="space-y-2">
+                  <Label htmlFor="mssv">Student ID (MSSV)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="mssv"
+                      value={profile.mssv}
+                      disabled
+                      className="bg-muted"
+                    />
+                    <Badge variant="secondary">Verified</Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Bio */}
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  value={profile.bio}
+                  onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
+                  placeholder="Tell us about yourself..."
+                  rows={4}
+                />
+              </div>
+
+              {/* Save Button */}
+              <Button onClick={handleSaveProfile} disabled={savingProfile} className="w-full">
+                {savingProfile ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Profile
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ====================================================================== */}
         {/* APPEARANCE TAB */}

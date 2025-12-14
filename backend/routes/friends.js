@@ -133,5 +133,35 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// Check friendship status with a user
+router.get('/status/:userId', authenticate, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const friendship = await Friendship.findOne({
+      $or: [
+        { user_id: req.user._id, friend_id: userId },
+        { user_id: userId, friend_id: req.user._id }
+      ]
+    });
+
+    if (!friendship) {
+      return res.json({ status: 'none', friendship: null });
+    }
+
+    // Determine if current user sent the request
+    const isSender = friendship.user_id.toString() === req.user._id.toString();
+    
+    res.json({ 
+      status: friendship.status,
+      isSender,
+      friendship_id: friendship._id
+    });
+  } catch (error) {
+    console.error('Check friendship status error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;
 

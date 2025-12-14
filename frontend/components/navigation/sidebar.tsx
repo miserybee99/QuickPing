@@ -159,16 +159,10 @@ export function Sidebar() {
           isActive={isActive('/settings')}
         />
 
-        {/* Profile with Avatar */}
-        <Link
-          href="/profile"
-          className={cn(
-            'relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 group',
-            isActive('/profile')
-              ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-              : 'hover:ring-2 hover:ring-muted hover:ring-offset-2 hover:ring-offset-background'
-          )}
-          title="Profile"
+        {/* Avatar indicator only (not clickable to profile) */}
+        <div
+          className="relative flex items-center justify-center w-12 h-12 rounded-xl"
+          title={user?.username || 'User'}
         >
           <Avatar className="w-9 h-9">
             <AvatarImage src={user?.avatar_url} alt={user?.username} />
@@ -181,12 +175,7 @@ export function Sidebar() {
           {user?.is_online && (
             <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-sidebar-bg" />
           )}
-          
-          {/* Tooltip */}
-          <span className="absolute left-full ml-4 px-3 py-2 bg-popover text-popover-foreground text-sm font-medium rounded-lg shadow-lg border border-border opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity duration-200">
-            Profile
-          </span>
-        </Link>
+        </div>
       </div>
     </aside>
   );

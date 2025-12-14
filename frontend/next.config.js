@@ -37,14 +37,6 @@ const nextConfig = {
         hostname: 'api.dicebear.com',
       },
       {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.cloudinary.com',
-      },
-      {
         protocol: 'http',
         hostname: 'localhost',
         port: '5001',
@@ -53,10 +45,6 @@ const nextConfig = {
         protocol: 'http',
         hostname: 'backend',
         port: '5001',
-      },
-      {
-        protocol: 'https',
-        hostname: 'quickping-axgd.onrender.com',
       },
     ],
   },

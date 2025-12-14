@@ -147,6 +147,11 @@ const apiClient = {
     rejectRequest: async (friendshipId: string) => {
       return await api.put(`/friends/request/${friendshipId}`, { status: 'rejected' });
     },
+    
+    // Check friendship status with a specific user
+    checkStatus: async (userId: string) => {
+      return await api.get(`/friends/status/${userId}`);
+    },
   },
   
   // ==========================================================================

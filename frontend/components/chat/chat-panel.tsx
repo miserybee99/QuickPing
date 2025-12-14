@@ -109,6 +109,10 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   // Phase 6: AI Summary state
   const [showAISummaryModal, setShowAISummaryModal] = useState(false);
   
+  // Friendship state
+  const [friendshipStatus, setFriendshipStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
+  const [friendshipLoading, setFriendshipLoading] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -546,12 +550,32 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
     
     try {
       const response = await api.get<{ conversation: Conversation }>(`/conversations/${conversationId}`);
-      setConversation(response.data.conversation);
-      onConversationLoaded?.(response.data.conversation);
+      const conv = response.data.conversation;
+      setConversation(conv);
+      onConversationLoaded?.(conv);
+      
+      // Fetch friendship status for direct conversations
+      if (conv.type === 'direct' && currentUser) {
+        const otherUser = conv.participants.find(p => p.user_id?._id !== currentUser._id);
+        if (otherUser?.user_id?._id) {
+          fetchFriendshipStatus(otherUser.user_id._id);
+        }
+      }
     } catch (error) {
       console.error('Error fetching conversation:', error);
       setConversation(null);
       onConversationLoaded?.(null);
+    }
+  };
+  
+  // Fetch friendship status
+  const fetchFriendshipStatus = async (userId: string) => {
+    try {
+      const response = await apiClient.friends.checkStatus(userId);
+      setFriendshipStatus(response.data.status || 'none');
+    } catch (error) {
+      console.error('Error checking friendship status:', error);
+      setFriendshipStatus('none');
     }
   };
 
@@ -1505,32 +1529,51 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
               )}
             </div>
             {conversation.type === 'direct' && otherParticipant && (
-              <button
-                onClick={async () => {
-                  try {
-                    await apiClient.friends.sendRequest(otherParticipant._id);
-                    toast({
-                      title: "Success!",
-                      description: "Friend request sent successfully.",
-                      variant: "success"
-                    });
-                  } catch (error: any) {
-                    const errorMsg = error?.response?.data?.error || 'Failed to send friend request';
-                    toast({
-                      title: "Error",
-                      description: errorMsg,
-                      variant: "destructive"
-                    });
-                  }
-                }}
-                className="px-4 py-2 bg-[#615EF0] hover:bg-[#615EF0]/90 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
-                title="Add Friend"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-white">
-                  <path d="M8 2V14M2 8H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-                Add Friend
-              </button>
+              friendshipStatus === 'accepted' ? (
+                <div className="px-4 py-2 bg-green-500/10 text-green-600 rounded-lg text-sm font-semibold flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  Friend
+                </div>
+              ) : friendshipStatus === 'pending' ? (
+                <div className="px-4 py-2 bg-amber-500/10 text-amber-600 rounded-lg text-sm font-semibold flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-amber-600">
+                    <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4"/>
+                  </svg>
+                  Pending
+                </div>
+              ) : (
+                <button
+                  onClick={async () => {
+                    try {
+                      setFriendshipLoading(true);
+                      await apiClient.friends.sendRequest(otherParticipant._id);
+                      setFriendshipStatus('pending');
+                      toast({
+                        title: "Success!",
+                        description: "Friend request sent successfully.",
+                        variant: "success"
+                      });
+                    } catch (error: any) {
+                      const errorMsg = error?.response?.data?.error || 'Failed to send friend request';
+                      toast({
+                        title: "Error",
+                        description: errorMsg,
+                        variant: "destructive"
+                      });
+                    } finally {
+                      setFriendshipLoading(false);
+                    }
+                  }}
+                  disabled={friendshipLoading}
+                  className="px-4 py-2 bg-[#615EF0] hover:bg-[#615EF0]/90 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
+                  title="Add Friend"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-white">
+                    <path d="M8 2V14M2 8H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  Add Friend
+                </button>
+              )
             )}
           </div>
           
