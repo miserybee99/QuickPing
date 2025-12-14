@@ -333,11 +333,24 @@ router.get('/proxy-download', authenticate, async (req, res) => {
   try {
     const { url, filename } = req.query;
     
+    console.log('📥 Proxy download request:', { url, filename });
+    
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    const downloadFilename = filename || url.split('/').pop() || 'download';
+    // Decode URL if it was double-encoded
+    let decodedUrl = url;
+    try {
+      // Try to decode in case of double encoding
+      if (url.includes('%25')) {
+        decodedUrl = decodeURIComponent(url);
+      }
+    } catch (e) {
+      // Use original if decoding fails
+    }
+
+    const downloadFilename = filename || decodedUrl.split('/').pop()?.split('?')[0] || 'download';
 
     // Handle local uploads
     if (url.startsWith('/uploads/')) {
@@ -357,11 +370,13 @@ router.get('/proxy-download', authenticate, async (req, res) => {
     }
 
     // Only allow Cloudinary URLs for security
-    if (!url.includes('cloudinary.com')) {
-      return res.status(403).json({ error: 'Invalid URL' });
+    if (!decodedUrl.includes('cloudinary.com') && !decodedUrl.includes('res.cloudinary.com')) {
+      console.log('❌ Invalid URL (not Cloudinary):', decodedUrl);
+      return res.status(403).json({ error: 'Invalid URL - only Cloudinary URLs are allowed' });
     }
 
-    const response = await fetch(url);
+    console.log('📥 Fetching from Cloudinary:', decodedUrl);
+    const response = await fetch(decodedUrl);
     if (!response.ok) {
       throw new Error(`Failed to fetch file: ${response.status}`);
     }

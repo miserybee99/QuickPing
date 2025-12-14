@@ -563,7 +563,8 @@ router.get('/google', (req, res, next) => {
   
   passport.authenticate('google', {
     scope: ['profile', 'email'],
-    session: false
+    session: false,
+    prompt: 'select_account' // Allow user to select which Google account to use
   })(req, res, next);
 });
 
