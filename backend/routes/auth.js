@@ -561,13 +561,10 @@ router.get('/google', (req, res, next) => {
     });
   }
   
-  // Get prompt option from query params (default: select_account)
-  const promptOption = req.query.prompt || 'select_account';
-  
   passport.authenticate('google', {
     scope: ['profile', 'email'],
     session: false,
-    prompt: promptOption, // 'select_account', 'consent', 'none', or 'select_account consent'
+    prompt: 'consent select_account', // Always show consent + account selection popup
     accessType: 'offline', // Get refresh token
     includeGrantedScopes: true // Include previously granted scopes
   })(req, res, next);

@@ -1,23 +1,18 @@
 import nodemailer from 'nodemailer';
-import brevo from '@getbrevo/brevo';
+import sgMail from '@sendgrid/mail';
 
-// Initialize Brevo client if API key is available
-let brevoClient = null;
-let brevoApi = null;
-
-if (process.env.BREVO_API_KEY) {
-  brevoClient = new brevo.TransactionalEmailsApi();
-  brevoClient.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
-  brevoApi = brevo;
-  console.log('📧 Brevo API configured');
+// Initialize SendGrid if API key is available
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  console.log('📧 SendGrid API configured');
 }
 
 // Create transporter based on environment
 const createTransporter = () => {
-  // If Brevo is configured, use it instead of SMTP
-  if (brevoClient) {
-    console.log('📧 Using Brevo API for email delivery');
-    return null; // We'll use Brevo directly
+  // If SendGrid is configured, use it instead of SMTP
+  if (process.env.SENDGRID_API_KEY) {
+    console.log('📧 Using SendGrid API for email delivery');
+    return null; // We'll use SendGrid directly
   }
   
   // Check if we have SMTP credentials configured
@@ -135,22 +130,20 @@ export const sendOTPEmail = async (email, username, otp) => {
     const htmlContent = generateOTPEmailHTML(username, otp);
     const textContent = generateOTPEmailText(username, otp);
 
-    // Use Brevo API if configured (best for production)
-    if (brevoClient) {
-      console.log('📧 Sending email via Brevo API...');
-      const sendSmtpEmail = new brevoApi.SendSmtpEmail();
-      sendSmtpEmail.subject = subject;
-      sendSmtpEmail.htmlContent = htmlContent;
-      sendSmtpEmail.textContent = textContent;
-      sendSmtpEmail.sender = { 
-        name: 'QuickPing', 
-        email: process.env.BREVO_FROM_EMAIL || 'quickping@noreply.com' 
+    // Use SendGrid API if configured (best for production)
+    if (process.env.SENDGRID_API_KEY) {
+      console.log('📧 Sending email via SendGrid API...');
+      const msg = {
+        to: email,
+        from: process.env.SENDGRID_FROM_EMAIL || 'noreply@quickping.app',
+        subject: subject,
+        text: textContent,
+        html: htmlContent,
       };
-      sendSmtpEmail.to = [{ email: email, name: username }];
 
-      const result = await brevoClient.sendTransacEmail(sendSmtpEmail);
-      console.log('📧 Email sent successfully via Brevo:', result.body?.messageId || 'sent');
-      return { success: true, messageId: result.body?.messageId || 'brevo-' + Date.now() };
+      const result = await sgMail.send(msg);
+      console.log('📧 Email sent successfully via SendGrid');
+      return { success: true, messageId: 'sendgrid-' + Date.now() };
     }
 
     // Use SMTP transporter if configured
@@ -188,8 +181,8 @@ export const sendOTPEmail = async (email, username, otp) => {
  * @returns {Promise<boolean>}
  */
 export const verifyEmailConnection = async () => {
-  if (brevoClient) {
-    console.log('✅ Email service ready (Brevo API)');
+  if (process.env.SENDGRID_API_KEY) {
+    console.log('✅ Email service ready (SendGrid API)');
     return true;
   }
   
@@ -302,22 +295,20 @@ export const sendPasswordResetOTPEmail = async (email, username, otp) => {
     const htmlContent = generatePasswordResetOTPEmailHTML(username, otp);
     const textContent = generatePasswordResetOTPEmailText(username, otp);
 
-    // Use Brevo API if configured (best for production)
-    if (brevoClient) {
-      console.log('📧 Sending password reset email via Brevo API...');
-      const sendSmtpEmail = new brevoApi.SendSmtpEmail();
-      sendSmtpEmail.subject = subject;
-      sendSmtpEmail.htmlContent = htmlContent;
-      sendSmtpEmail.textContent = textContent;
-      sendSmtpEmail.sender = { 
-        name: 'QuickPing Security', 
-        email: process.env.BREVO_FROM_EMAIL || 'quickping@noreply.com' 
+    // Use SendGrid API if configured (best for production)
+    if (process.env.SENDGRID_API_KEY) {
+      console.log('📧 Sending password reset email via SendGrid API...');
+      const msg = {
+        to: email,
+        from: process.env.SENDGRID_FROM_EMAIL || 'noreply@quickping.app',
+        subject: subject,
+        text: textContent,
+        html: htmlContent,
       };
-      sendSmtpEmail.to = [{ email: email, name: username }];
 
-      const result = await brevoClient.sendTransacEmail(sendSmtpEmail);
-      console.log('📧 Password reset email sent successfully via Brevo:', result.body?.messageId || 'sent');
-      return { success: true, messageId: result.body?.messageId || 'brevo-' + Date.now() };
+      await sgMail.send(msg);
+      console.log('📧 Password reset email sent successfully via SendGrid');
+      return { success: true, messageId: 'sendgrid-' + Date.now() };
     }
 
     // Use SMTP transporter if configured
