@@ -19,7 +19,7 @@ const THEME_KEY = 'quickping-theme';
 const FONT_SIZE_KEY = 'quickping-font-size';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('system');
+  const [theme, setThemeState] = useState<Theme>('light');
   const [fontSize, setFontSizeState] = useState<FontSize>('medium');
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
   const [mounted, setMounted] = useState(false);
@@ -75,7 +75,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const savedTheme = localStorage.getItem(THEME_KEY) as Theme | null;
     const savedFontSize = localStorage.getItem(FONT_SIZE_KEY) as FontSize | null;
 
-    const initialTheme = savedTheme || 'system';
+    const initialTheme = savedTheme || 'light';
     const initialFontSize = savedFontSize || 'medium';
 
     setThemeState(initialTheme);

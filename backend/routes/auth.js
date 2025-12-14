@@ -140,74 +140,38 @@ router.post('/login', [
         await userCaseInsensitive.save();
         const isValid = await bcrypt.compare(password, userCaseInsensitive.password_hash);
         if (isValid) {
-          // Continue with login flow...
+          // Update last seen
           userCaseInsensitive.last_seen = new Date();
           await userCaseInsensitive.save();
-          const token = jwt.sign(
-            { userId: userCaseInsensitive._id },
-            process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-          );
-          const session = new UserSession({
-            user_id: userCaseInsensitive._id,
-            token,
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          });
-          await session.save();
           
-          // Check if email verification is required
-          if (!userCaseInsensitive.is_verified) {
-            console.log('📧 User not verified, sending OTP to:', userCaseInsensitive.email);
-            
-            await OTP.deleteMany({ email: userCaseInsensitive.email });
-            
-            const otp = OTP.generateOTP();
-            const otpHash = await bcrypt.hash(otp, 10);
-            
-            const otpDoc = new OTP({
-              user_id: userCaseInsensitive._id,
-              email: userCaseInsensitive.email,
-              otp_hash: otpHash,
-              expires_at: OTP.getExpiryTime()
-            });
-            await otpDoc.save();
-            
-            try {
-              await sendOTPEmail(userCaseInsensitive.email, userCaseInsensitive.username, otp);
-            } catch (emailError) {
-              console.error('Failed to send verification email:', emailError);
-            }
-            
-            return res.json({
-              token,
-              requireVerification: true,
-              user: {
-                _id: userCaseInsensitive._id,
-                email: userCaseInsensitive.email,
-                username: userCaseInsensitive.username,
-                mssv: userCaseInsensitive.mssv,
-                avatar_url: userCaseInsensitive.avatar_url,
-                bio: userCaseInsensitive.bio,
-                role: userCaseInsensitive.role,
-                is_verified: userCaseInsensitive.is_verified,
-                preferences: userCaseInsensitive.preferences
-              }
-            });
+          // 2FA: Always require OTP for every login
+          console.log('🔐 Sending login OTP to:', userCaseInsensitive.email);
+          
+          await OTP.deleteMany({ email: userCaseInsensitive.email });
+          
+          const otp = OTP.generateOTP();
+          const otpHash = await bcrypt.hash(otp, 10);
+          
+          const otpDoc = new OTP({
+            user_id: userCaseInsensitive._id,
+            email: userCaseInsensitive.email,
+            otp_hash: otpHash,
+            type: 'email_verification',
+            expires_at: OTP.getExpiryTime()
+          });
+          await otpDoc.save();
+          
+          try {
+            await sendOTPEmail(userCaseInsensitive.email, userCaseInsensitive.username, otp);
+          } catch (emailError) {
+            console.error('Failed to send login OTP:', emailError);
           }
           
-          return res.json({
-            token,
-            user: {
-              _id: userCaseInsensitive._id,
-              email: userCaseInsensitive.email,
-              username: userCaseInsensitive.username,
-              mssv: userCaseInsensitive.mssv,
-              avatar_url: userCaseInsensitive.avatar_url,
-              bio: userCaseInsensitive.bio,
-              role: userCaseInsensitive.role,
-              is_verified: userCaseInsensitive.is_verified,
-              preferences: userCaseInsensitive.preferences
-            }
+          // Return 403 to indicate OTP verification required
+          return res.status(403).json({
+            requireVerification: true,
+            email: userCaseInsensitive.email,
+            message: 'Vui lòng kiểm tra email và nhập mã OTP để đăng nhập.'
           });
         }
       }
@@ -235,84 +199,38 @@ router.post('/login', [
     user.last_seen = new Date();
     await user.save();
 
-    // Generate token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
-
-    // Save session
-    const session = new UserSession({
-      user_id: user._id,
-      token,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    });
-    await session.save();
-
-    // Check if email verification is required
-    console.log('🔍 Checking verification status:', { 
-      userId: user._id, 
-      email: user.email, 
-      is_verified: user.is_verified 
-    });
+    // 2FA: Always require OTP for every login (not just unverified users)
+    console.log('🔐 Sending login OTP to:', user.email);
     
-    if (!user.is_verified) {
-      console.log('📧 User not verified, sending OTP to:', user.email);
-      
-      // Delete existing OTPs for this user
-      await OTP.deleteMany({ email: user.email });
-      
-      // Generate and send new OTP
-      const otp = OTP.generateOTP();
-      const otpHash = await bcrypt.hash(otp, 10);
-      
-      const otpDoc = new OTP({
-        user_id: user._id,
-        email: user.email,
-        otp_hash: otpHash,
-        expires_at: OTP.getExpiryTime()
-      });
-      await otpDoc.save();
-      
-      // Send OTP email
-      try {
-        await sendOTPEmail(user.email, user.username, otp);
-        console.log('✅ Verification OTP sent to:', user.email);
-      } catch (emailError) {
-        console.error('Failed to send verification email:', emailError);
-      }
-      
-      return res.json({
-        token,
-        requireVerification: true,
-        user: {
-          _id: user._id,
-          email: user.email,
-          username: user.username,
-          mssv: user.mssv,
-          avatar_url: user.avatar_url,
-          bio: user.bio,
-          role: user.role,
-          is_verified: user.is_verified,
-          preferences: user.preferences
-        }
-      });
+    // Delete existing OTPs for this user
+    await OTP.deleteMany({ email: user.email });
+    
+    // Generate and send new OTP
+    const otp = OTP.generateOTP();
+    const otpHash = await bcrypt.hash(otp, 10);
+    
+    const otpDoc = new OTP({
+      user_id: user._id,
+      email: user.email,
+      otp_hash: otpHash,
+      type: 'email_verification', // Can be 'login_verification' if you want to separate
+      expires_at: OTP.getExpiryTime()
+    });
+    await otpDoc.save();
+    
+    // Send OTP email
+    try {
+      await sendOTPEmail(user.email, user.username, otp);
+      console.log('✅ Login OTP sent to:', user.email);
+    } catch (emailError) {
+      console.error('Failed to send login OTP:', emailError);
     }
-
-    res.json({
-      token,
-      user: {
-        _id: user._id,
-        email: user.email,
-        username: user.username,
-        mssv: user.mssv,
-        avatar_url: user.avatar_url,
-        bio: user.bio,
-        role: user.role,
-        is_verified: user.is_verified,
-        preferences: user.preferences
-      }
+    
+    // Return 403 to indicate OTP verification required, no token yet
+    return res.status(403).json({
+      requireVerification: true,
+      email: user.email,
+      message: 'Vui lòng kiểm tra email và nhập mã OTP để đăng nhập.'
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -714,6 +632,173 @@ router.get('/google/status', (req, res) => {
       ? 'Google OAuth đã được cấu hình' 
       : 'Google OAuth chưa được cấu hình'
   });
+});
+
+// ==================== FORGOT PASSWORD ENDPOINTS ====================
+
+// Request password reset
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Find user
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      // Don't reveal if email exists or not (security)
+      return res.json({ 
+        message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được mã xác thực để đặt lại mật khẩu.',
+        email: normalizedEmail
+      });
+    }
+
+    // Check if user has password (OAuth users don't have password)
+    if (!user.password_hash) {
+      return res.status(400).json({ 
+        error: 'Tài khoản này đăng nhập bằng Google. Không thể đặt lại mật khẩu.' 
+      });
+    }
+
+    // Rate limiting: Check reset requests in last hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentResets = await OTP.countDocuments({
+      email: normalizedEmail,
+      type: 'password_reset',
+      created_at: { $gte: oneHourAgo }
+    });
+
+    const maxResend = parseInt(process.env.OTP_MAX_RESEND_PER_HOUR) || 5;
+    if (recentResets >= maxResend) {
+      return res.status(429).json({ 
+        error: `Bạn đã yêu cầu quá nhiều mã. Vui lòng thử lại sau 1 giờ.`,
+        retryAfter: 3600
+      });
+    }
+
+    // Delete any existing password reset OTPs for this email
+    await OTP.deleteMany({ 
+      email: normalizedEmail, 
+      type: 'password_reset' 
+    });
+
+    // Generate new OTP
+    const otp = OTP.generateOTP();
+    const otpHash = await bcrypt.hash(otp, 10);
+
+    // Save OTP with password_reset type
+    const otpDoc = new OTP({
+      user_id: user._id,
+      email: normalizedEmail,
+      otp_hash: otpHash,
+      type: 'password_reset',
+      expires_at: OTP.getExpiryTime()
+    });
+    await otpDoc.save();
+
+    // Send password reset email
+    const { sendPasswordResetOTPEmail } = await import('../services/email.service.js');
+    await sendPasswordResetOTPEmail(normalizedEmail, user.username, otp);
+
+    console.log('🔐 Password reset OTP sent to:', normalizedEmail);
+
+    res.json({ 
+      message: 'Mã xác thực đã được gửi đến email của bạn',
+      email: normalizedEmail,
+      expiresIn: parseInt(process.env.OTP_EXPIRES_MINUTES) || 10
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Không thể gửi mã xác thực. Vui lòng thử lại.' });
+  }
+});
+
+// Reset password with OTP
+router.post('/reset-password', [
+  body('email').isEmail().normalizeEmail(),
+  body('otp').isLength({ min: 6, max: 6 }).isNumeric(),
+  body('newPassword').isLength({ min: 6 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, otp, newPassword } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Find the OTP record for password reset
+    const otpDoc = await OTP.findOne({
+      email: normalizedEmail,
+      type: 'password_reset',
+      is_used: false,
+      expires_at: { $gt: new Date() }
+    });
+
+    if (!otpDoc) {
+      return res.status(400).json({ error: 'Mã xác thực không hợp lệ hoặc đã hết hạn' });
+    }
+
+    // Check attempts
+    const maxAttempts = parseInt(process.env.OTP_MAX_ATTEMPTS) || 5;
+    if (otpDoc.attempts >= maxAttempts) {
+      return res.status(429).json({ 
+        error: 'Đã vượt quá số lần thử. Vui lòng yêu cầu mã mới.' 
+      });
+    }
+
+    // Verify OTP
+    const isValid = await bcrypt.compare(otp, otpDoc.otp_hash);
+    
+    if (!isValid) {
+      // Increment attempts
+      otpDoc.attempts += 1;
+      await otpDoc.save();
+      
+      const remainingAttempts = maxAttempts - otpDoc.attempts;
+      return res.status(400).json({ 
+        error: `Mã xác thực không đúng. Còn ${remainingAttempts} lần thử.`,
+        remainingAttempts
+      });
+    }
+
+    // Mark OTP as used
+    otpDoc.is_used = true;
+    await otpDoc.save();
+
+    // Find user and update password
+    const user = await User.findById(otpDoc.user_id);
+    if (!user) {
+      return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+    }
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    user.password_hash = newPasswordHash;
+    await user.save();
+
+    // Invalidate all existing sessions for security
+    await UserSession.deleteMany({ user_id: user._id });
+
+    console.log('🔐 Password reset successfully for:', user.email);
+
+    res.json({
+      message: 'Mật khẩu đã được đặt lại thành công! Vui lòng đăng nhập lại.',
+      success: true
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Không thể đặt lại mật khẩu. Vui lòng thử lại.' });
+  }
 });
 
 export default router;

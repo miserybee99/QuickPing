@@ -282,6 +282,18 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
               const lastMessage = getLastMessagePreview(conv);
               const timeAgo = getTimeAgo(conv.updated_at || conv.created_at);
               
+              // Check if the last message is unread by current user
+              // Only mark as unread if: 1) message exists, 2) sender is NOT current user, 3) current user hasn't read it
+              const lastMessageSenderId = typeof conv.last_message?.sender_id === 'string' 
+                ? conv.last_message.sender_id 
+                : conv.last_message?.sender_id?._id;
+              
+              const isUnread = conv.last_message && 
+                              lastMessageSenderId !== user?._id && 
+                              !conv.last_message.read_by?.some(
+                                r => (typeof r.user_id === 'string' ? r.user_id : r.user_id?._id) === user?._id
+                              );
+              
               return (
                 <div
                   key={conv._id}
@@ -308,17 +320,31 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-3 mb-1">
-                      <span className="font-semibold text-[14px] leading-[21px] truncate">
+                      <span className={cn(
+                        "text-[14px] leading-[21px] truncate",
+                        isUnread ? "font-bold" : "font-semibold"
+                      )}>
                         {name}
                       </span>
-                      <span className="text-[14px] font-semibold text-gray-900 opacity-30 flex-shrink-0">
+                      <span className={cn(
+                        "text-[14px] text-gray-900 flex-shrink-0",
+                        isUnread ? "font-bold opacity-60" : "font-semibold opacity-30"
+                      )}>
                         {timeAgo}
                       </span>
                     </div>
                     
-                    <p className="text-[14px] leading-[21px] text-gray-900 opacity-40 truncate mb-2">
-                      {lastMessage}
-                    </p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className={cn(
+                        "text-[14px] leading-[21px] text-gray-900 truncate flex-1",
+                        isUnread ? "font-semibold opacity-80" : "opacity-40"
+                      )}>
+                        {lastMessage}
+                      </p>
+                      {isUnread && (
+                        <div className="w-2 h-2 bg-[#615EF0] rounded-full flex-shrink-0" />
+                      )}
+                    </div>
 
                     {/* Badges */}
                     {conv.type === 'group' && (

@@ -121,10 +121,7 @@ export function AvatarUploadDropzone({
       const uploadedFile = (response as any).data?.file || (response as any).file;
       const newAvatarUrl = uploadedFile.url;
 
-      // Update user profile with new avatar URL
-      await apiClient.users.updateProfile({ avatar_url: newAvatarUrl });
-
-      // Notify parent
+      // Notify parent (parent will handle profile update)
       onAvatarChange(newAvatarUrl);
 
       // Close modal

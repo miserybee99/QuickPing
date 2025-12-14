@@ -9,7 +9,7 @@ export interface SelectedFile {
   id: string;
   file: File;
   preview?: string;
-  status: 'pending' | 'uploading' | 'success' | 'error';
+  status: 'pending' | 'uploading' | 'completed' | 'error';
   progress: number;
   error?: string;
 }

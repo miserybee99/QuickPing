@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Phone, Send, Paperclip, Check, Smile, MessageCircle, Vote, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, Paperclip, Check, Smile, MessageCircle, Vote, ChevronDown, ChevronUp } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -31,6 +31,36 @@ import { VoteMessage } from '@/components/chat/vote-message';
 import { CreateVoteModal } from '@/components/modals/create-vote-modal';
 import { AISummaryModal } from '@/components/modals/ai-summary-modal';
 import { Sparkles } from 'lucide-react';
+
+// Component to linkify URLs in text
+function LinkifiedText({ text, className }: { text: string; className?: string }) {
+  // URL regex pattern
+  const urlPattern = /(https?:\/\/[^\s]+)/g;
+  
+  const parts = text.split(urlPattern);
+  
+  return (
+    <span className={className}>
+      {parts.map((part, index) => {
+        if (part.match(urlPattern)) {
+          return (
+            <a
+              key={index}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:opacity-80 break-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </span>
+  );
+}
 
 interface ChatPanelProps {
   conversationId: string | null;
@@ -1196,12 +1226,32 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
 
             const uploadedFile = (uploadResult as any).data?.file || (uploadResult as any).file;
             
+            // Debug: Log uploaded file info
+            console.log('Uploaded file:', {
+              filename: uploadedFile.original_name,
+              mime_type: uploadedFile.mime_type,
+              url: uploadedFile.url,
+              file_id: uploadedFile._id
+            });
+            
+            // Determine message type based on mime_type
+            let messageType: 'text' | 'file' | 'image' | 'video' | 'system' = 'file';
+            if (uploadedFile.mime_type?.startsWith('image/')) {
+              messageType = 'image';
+              console.log('✅ Detected as IMAGE, setting type to:', messageType);
+            } else if (uploadedFile.mime_type?.startsWith('video/')) {
+              messageType = 'video';
+              console.log('✅ Detected as VIDEO, setting type to:', messageType);
+            }
+            
+            console.log('Final message type:', messageType);
+            
             // Send message with file_info
             const fileContent = i === 0 ? messageContent : ''; // Only add text to first file message
             const response = await api.post<{ message: Message }>('/messages', {
               conversation_id: conversationId,
               content: fileContent || '',
-              type: 'file',
+              type: messageType,
               file_info: {
                 file_id: uploadedFile._id,
                 filename: uploadedFile.original_name,
@@ -1235,7 +1285,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
             // Mark file as uploaded
             setSelectedFiles((prev) =>
               prev.map((f) =>
-                f.id === fileId ? { ...f, status: 'success', progress: 100 } : f
+                f.id === fileId ? { ...f, status: 'completed', progress: 100 } : f
               )
             );
           } catch (error: any) {
@@ -1428,14 +1478,14 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
         )}
         
         <div className="h-20 flex items-center justify-between px-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-1">
             <Avatar className="h-10 w-10 rounded-[10px]">
               <AvatarImage src={getFileUrl(otherParticipant?.avatar_url)} />
               <AvatarFallback className="rounded-[10px] bg-gray-200">
                 {conversationName[0]?.toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="flex-1">
               <h3 className="font-semibold text-[20px] leading-[25px]">{conversationName}</h3>
               {conversation.type === 'direct' && otherParticipant && (
                 <div className="flex items-center gap-2 mt-0.5">
@@ -1453,6 +1503,30 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                 </div>
               )}
             </div>
+            {conversation.type === 'direct' && otherParticipant && (
+              <button
+                onClick={async () => {
+                  try {
+                    await apiClient.friends.sendRequest(otherParticipant._id);
+                    alert('Friend request sent!');
+                  } catch (error: any) {
+                    const errorMsg = error?.response?.data?.error || 'Failed to send friend request';
+                    if (errorMsg.includes('already friends') || errorMsg.includes('already sent')) {
+                      alert(errorMsg);
+                    } else {
+                      alert('Failed to send friend request');
+                    }
+                  }
+                }}
+                className="px-4 py-2 bg-[#615EF0] hover:bg-[#615EF0]/90 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+                title="Add Friend"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-white">
+                  <path d="M8 2V14M2 8H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                Add Friend
+              </button>
+            )}
           </div>
           
           <div className="flex items-center gap-2">
@@ -1466,11 +1540,6 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
               <span className="text-[14px] font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 AI Summary
               </span>
-            </button>
-            
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-[#615EF0]/10 rounded-lg hover:bg-[#615EF0]/20 transition-colors">
-              <Phone className="w-6 h-6 text-[#615EF0]" strokeWidth={1.5} />
-              <span className="text-[16px] font-semibold text-[#615EF0]">Call</span>
             </button>
           </div>
         </div>
@@ -1622,42 +1691,48 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                               />
                             )}
                             
-                            <div
-                              ref={(el) => {
-                                if (el) messageRefs.current.set(messageId, el);
-                              }}
-                              className={cn(
-                                'px-4 py-2 rounded-xl max-w-md transition-colors duration-500',
-                                isOwn
-                                  ? 'bg-[#615EF0] text-white'
-                                  : 'bg-[#F1F1F1] text-gray-900'
-                              )}
-                            >
-                              {/* Quoted message (reply_to) */}
-                              {msg.reply_to && (
-                                <QuotedMessage
-                                  message={msg.reply_to}
-                                  isOwnMessage={isOwn}
-                                  showInBubble={true}
-                                  onClick={() => scrollToMessage(msg.reply_to?._id || '')}
-                                />
-                              )}
-                              
-                              {msg.content && (
-                                <p className="text-[14px] leading-[21px]">
-                                  {msg.content}
-                                  {msg.is_edited && (
-                                    <span className={cn(
-                                      'text-[10px] ml-1 italic',
-                                      isOwn ? 'text-white/70' : 'text-gray-500'
-                                    )}>
-                                      (edited)
-                                    </span>
-                                  )}
-                                </p>
-                              )}
-                              
-                              {msg.file_info && (
+                            {/* Render file outside bubble if it's an image/video */}
+                            {msg.file_info && (msg.file_info.mime_type?.startsWith('image/') || msg.file_info.mime_type?.startsWith('video/')) ? (
+                              <div
+                                ref={(el) => {
+                                  if (el) messageRefs.current.set(messageId, el);
+                                }}
+                                className="flex flex-col gap-2"
+                              >
+                                {/* Text content in bubble if present */}
+                                {(msg.content || msg.reply_to) && (
+                                  <div
+                                    className={cn(
+                                      'px-4 py-2 rounded-xl max-w-md transition-colors duration-500',
+                                      isOwn
+                                        ? 'bg-[#615EF0] text-white'
+                                        : 'bg-[#F1F1F1] text-gray-900'
+                                    )}
+                                  >
+                                    {msg.reply_to && (
+                                      <QuotedMessage
+                                        message={msg.reply_to}
+                                        isOwnMessage={isOwn}
+                                        showInBubble={true}
+                                        onClick={() => scrollToMessage(msg.reply_to?._id || '')}
+                                      />
+                                    )}
+                                    {msg.content && (
+                                      <p className="text-[14px] leading-[21px]">
+                                        {msg.content}
+                                        {msg.is_edited && (
+                                          <span className={cn(
+                                            'text-[10px] ml-1 italic',
+                                            isOwn ? 'text-white/70' : 'text-gray-500'
+                                          )}>
+                                            (edited)
+                                          </span>
+                                        )}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                                {/* Image/Video outside bubble */}
                                 <FileMessage
                                   fileInfo={msg.file_info}
                                   isOwnMessage={isOwn}
@@ -1668,8 +1743,58 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                                     size: msg.file_info?.size || 0
                                   })}
                                 />
-                              )}
-                            </div>
+                              </div>
+                            ) : (
+                              <div
+                                ref={(el) => {
+                                  if (el) messageRefs.current.set(messageId, el);
+                                }}
+                                className={cn(
+                                  'px-4 py-2 rounded-xl max-w-md transition-colors duration-500',
+                                  isOwn
+                                    ? 'bg-[#615EF0] text-white'
+                                    : 'bg-[#F1F1F1] text-gray-900'
+                                )}
+                              >
+                                {/* Quoted message (reply_to) */}
+                                {msg.reply_to && (
+                                  <QuotedMessage
+                                    message={msg.reply_to}
+                                    isOwnMessage={isOwn}
+                                    showInBubble={true}
+                                    onClick={() => scrollToMessage(msg.reply_to?._id || '')}
+                                  />
+                                )}
+                                
+                                {msg.content && (
+                                  <p className="text-[14px] leading-[21px]">
+                                    <LinkifiedText text={msg.content} />
+                                    {msg.is_edited && (
+                                      <span className={cn(
+                                        'text-[10px] ml-1 italic',
+                                        isOwn ? 'text-white/70' : 'text-gray-500'
+                                      )}>
+                                        (edited)
+                                      </span>
+                                    )}
+                                  </p>
+                                )}
+                                
+                                {/* Other files inside bubble */}
+                                {msg.file_info && (
+                                  <FileMessage
+                                    fileInfo={msg.file_info}
+                                    isOwnMessage={isOwn}
+                                    onPreview={() => setPreviewFile({
+                                      url: msg.file_info?.url || `/api/files/${msg.file_info?.file_id}/download`,
+                                      name: msg.file_info?.filename || 'File',
+                                      type: msg.file_info?.mime_type || '',
+                                      size: msg.file_info?.size || 0
+                                    })}
+                                  />
+                                )}
+                              </div>
+                            )}
                             
                             {/* Actions menu for other's messages */}
                             {!isOwn && (

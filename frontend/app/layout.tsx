@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 const themeScript = `
   (function() {
     try {
-      var theme = localStorage.getItem('quickping-theme') || 'system';
+      var theme = localStorage.getItem('quickping-theme') || 'light';
       var fontSize = localStorage.getItem('quickping-font-size') || 'medium';
       
       var resolved = theme;
@@ -29,6 +29,8 @@ const themeScript = `
       
       if (resolved === 'dark') {
         document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
       }
       document.documentElement.style.colorScheme = resolved;
       document.documentElement.classList.add('font-' + fontSize);

@@ -15,7 +15,7 @@ export default function LayoutContent({
   const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   
   // Pages that don't require authentication (public pages)
-  const publicPages = ['/login', '/register', '/verify-email', '/auth/callback'];
+  const publicPages = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/auth/callback'];
   const isPublicPage = publicPages.some(page => pathname.startsWith(page));
 
   // Check authentication status
@@ -23,24 +23,46 @@ export default function LayoutContent({
     const checkAuth = () => {
       const token = localStorage.getItem('token');
       const user = localStorage.getItem('user');
+      const pendingVerification = localStorage.getItem('pendingVerification');
+      
+      console.log('🔐 Layout auth check:', { 
+        pathname,
+        hasToken: !!token, 
+        hasUser: !!user,
+        pendingVerification,
+        isPublicPage 
+      });
+      
+      // If pending verification, treat as unauthenticated (let verify-email page handle it)
+      if (pendingVerification === 'true') {
+        console.log('⏳ Pending verification, treating as unauthenticated');
+        setAuthState('unauthenticated');
+        return;
+      }
       
       if (token && user) {
         try {
           const userData = JSON.parse(user);
+          console.log('👤 User data:', { email: userData.email, is_verified: userData.is_verified });
+          
           // User must be verified to access main app
           if (userData.is_verified === true) {
+            console.log('✅ User authenticated and verified');
             setAuthState('authenticated');
           } else {
             // User logged in but not verified - redirect to verify
+            console.log('❌ User not verified');
             setAuthState('unauthenticated');
             if (!isPublicPage) {
               router.replace(`/verify-email?email=${encodeURIComponent(userData.email || '')}`);
             }
           }
         } catch {
+          console.log('❌ Failed to parse user data');
           setAuthState('unauthenticated');
         }
       } else {
+        console.log('❌ No token or user found');
         setAuthState('unauthenticated');
       }
     };

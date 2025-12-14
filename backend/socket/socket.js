@@ -227,6 +227,29 @@ export const setupSocketIO = (io) => {
       });
     });
 
+    // Handle vote created
+    socket.on('vote_created', (data) => {
+      console.log(`🗳️ User ${userId} created vote in conversation ${data.conversation_id}`);
+      
+      // Broadcast to all users in the conversation except sender
+      socket.to(`conversation_${data.conversation_id}`).emit('new_vote', {
+        conversation_id: data.conversation_id,
+        vote: data.vote
+      });
+    });
+
+    // Handle vote cast
+    socket.on('vote_cast', (data) => {
+      console.log(`✅ User ${userId} cast vote ${data.vote_id} in conversation ${data.conversation_id}`);
+      
+      // Broadcast to all users in the conversation
+      io.to(`conversation_${data.conversation_id}`).emit('vote_updated', {
+        conversation_id: data.conversation_id,
+        vote_id: data.vote_id,
+        vote: data.vote
+      });
+    });
+
     // Handle online status change
     socket.on('update_status', (status) => {
       io.emit('user_status_changed', {

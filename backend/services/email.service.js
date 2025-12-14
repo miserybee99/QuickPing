@@ -164,6 +164,127 @@ export const verifyEmailConnection = async () => {
   }
 };
 
+// Generate Password Reset OTP email HTML template
+const generatePasswordResetOTPEmailHTML = (username, otp) => {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đặt Lại Mật Khẩu - QuickPing</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+             background-color: #f5f5f5; margin: 0; padding: 20px; line-height: 1.6;">
+  <div style="max-width: 480px; margin: 0 auto; background: white; 
+              border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    
+    <!-- Logo -->
+    <div style="text-align: center; margin-bottom: 30px;">
+      <h1 style="color: #ef4444; margin: 0; font-size: 28px;">🔐 QuickPing</h1>
+    </div>
+    
+    <!-- Greeting -->
+    <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
+      Xin chào <strong>${username}</strong>! 👋
+    </p>
+    
+    <!-- Message -->
+    <p style="font-size: 16px; color: #666; margin-bottom: 24px;">
+      Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản QuickPing. Đây là mã xác thực của bạn:
+    </p>
+    
+    <!-- OTP Box -->
+    <div style="background: linear-gradient(135deg, #ef4444, #dc2626); 
+                border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+      <span style="font-size: 36px; font-weight: bold; color: white; 
+                   letter-spacing: 8px; font-family: 'Courier New', monospace;">
+        ${otp}
+      </span>
+    </div>
+    
+    <!-- Expiry Notice -->
+    <p style="font-size: 14px; color: #888; text-align: center; margin-bottom: 24px;">
+      ⏱️ Mã này sẽ hết hạn sau <strong>10 phút</strong>
+    </p>
+    
+    <!-- Warning -->
+    <div style="background: #fee2e2; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+      <p style="font-size: 14px; color: #991b1b; margin: 0;">
+        ⚠️ Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này và không chia sẻ mã này với bất kỳ ai.
+        Mật khẩu của bạn sẽ không thay đổi nếu bạn không nhập mã này.
+      </p>
+    </div>
+    
+    <!-- Footer -->
+    <div style="border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
+      <p style="font-size: 12px; color: #999; margin: 0;">
+        © 2024 QuickPing. Kết nối mọi người.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+};
+
+// Generate plain text version for password reset
+const generatePasswordResetOTPEmailText = (username, otp) => {
+  return `
+Xin chào ${username}!
+
+Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản QuickPing.
+
+Mã xác thực của bạn là: ${otp}
+
+Mã này sẽ hết hạn sau 10 phút.
+
+Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
+
+- QuickPing Team
+  `.trim();
+};
+
+/**
+ * Send Password Reset OTP email
+ * @param {string} email - Recipient email
+ * @param {string} username - User's display name
+ * @param {string} otp - 6-digit OTP code
+ * @returns {Promise<{success: boolean, messageId?: string}>}
+ */
+export const sendPasswordResetOTPEmail = async (email, username, otp) => {
+  try {
+    const mailOptions = {
+      from: `"QuickPing Security" <${process.env.SMTP_USER || 'noreply@quickping.app'}>`,
+      to: email,
+      subject: '🔐 [QuickPing] Mã xác thực đặt lại mật khẩu',
+      html: generatePasswordResetOTPEmailHTML(username, otp),
+      text: generatePasswordResetOTPEmailText(username, otp)
+    };
+
+    // If no transporter (dev mode), log to console
+    if (!transporter) {
+      console.log('═══════════════════════════════════════════════════');
+      console.log('📧 PASSWORD RESET EMAIL (Development Mode):');
+      console.log('═══════════════════════════════════════════════════');
+      console.log(`To: ${email}`);
+      console.log(`Subject: ${mailOptions.subject}`);
+      console.log(`OTP Code: ${otp}`);
+      console.log('═══════════════════════════════════════════════════');
+      return { success: true, messageId: 'dev-mode-' + Date.now() };
+    }
+
+    const info = await transporter.sendMail(mailOptions);
+    
+    console.log('📧 Password reset email sent successfully:', info.messageId);
+    
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Password reset email error:', error);
+    throw new Error('Failed to send password reset email: ' + error.message);
+  }
+};
+
 /**
  * Reinitialize transporter (useful if env vars changed)
  */
@@ -173,6 +294,7 @@ export const reinitializeTransporter = () => {
 
 export default {
   sendOTPEmail,
+  sendPasswordResetOTPEmail,
   verifyEmailConnection,
   reinitializeTransporter
 };

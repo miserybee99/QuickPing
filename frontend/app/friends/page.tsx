@@ -108,6 +108,22 @@ export default function FriendsPage() {
     }
   };
 
+  const handleMessage = async (friendId: string) => {
+    setActionLoading(friendId);
+    try {
+      // Create or get existing DM conversation
+      const response = await apiClient.conversations.createDirect(friendId);
+      const conversation = response.data.conversation;
+      
+      // Navigate to chat with conversation ID
+      router.push(`/?conversation=${conversation._id}`);
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const filteredFriends = friends.filter((friend) =>
     friend.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -223,15 +239,21 @@ export default function FriendsPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => router.push(`/chat?user=${friend._id}`)}
+                        onClick={() => handleMessage(friend._id)}
+                        disabled={actionLoading === friend._id}
                       >
-                        Message
+                        {actionLoading === friend._id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          'Message'
+                        )}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         className="text-destructive hover:text-destructive"
                         onClick={() => handleRemoveFriend(friend._id)}
+                        disabled={actionLoading === friend._id}
                       >
                         <UserMinus className="h-4 w-4" />
                       </Button>

@@ -27,6 +27,15 @@ export function FileMessage({ fileInfo, isOwnMessage, onPreview }: FileMessagePr
   // File URL used by child components
   void canPreview; // Mark as intentionally unused for now
 
+  // Debug: Log file info
+  console.log('🖼️ FileMessage rendering:', {
+    filename: fileInfo.filename,
+    mime_type: fileInfo.mime_type,
+    category: category,
+    url: fileInfo.url,
+    file_id: fileInfo.file_id
+  });
+
   // Render based on file type
   switch (category) {
     case 'image':
@@ -108,9 +117,26 @@ function ImageMessage({
         onError={() => setError(true)}
       />
       
-      {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-        <ExternalLink className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+      {/* Hover overlay with download button */}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-2">
+        <ExternalLink 
+          className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPreview?.(fileInfo);
+          }}
+        />
+        <a
+          href={fileInfo.url || `/api/files/${fileInfo.file_id}/download`}
+          download={fileInfo.filename}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 inline-flex items-center justify-center"
+          title="Download"
+        >
+          <Download className="w-8 h-8" />
+        </a>
       </div>
       
       {/* File info */}
@@ -154,11 +180,24 @@ function VideoMessage({
       {/* Play button overlay */}
       {!isPlaying && (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer"
+          className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer group/video"
           onClick={() => setIsPlaying(true)}
         >
-          <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors">
-            <Play className="w-6 h-6 text-gray-900 ml-1" fill="currentColor" />
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors">
+              <Play className="w-6 h-6 text-gray-900 ml-1" fill="currentColor" />
+            </div>
+            <a
+              href={fileInfo.url || `/api/files/${fileInfo.file_id}/download`}
+              download={fileInfo.filename}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors opacity-0 group-hover/video:opacity-100"
+              title="Download video"
+            >
+              <Download className="w-5 h-5 text-gray-900" />
+            </a>
           </div>
         </div>
       )}
@@ -177,7 +216,22 @@ function VideoMessage({
         )}>
           {formatFileSize(fileInfo.size)}
         </span>
-      </div>
+        <a
+          href={fileInfo.url || `/api/files/${fileInfo.file_id}/download`}
+          download={fileInfo.filename}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          className={cn(
+            'p-1 rounded transition-colors inline-flex items-center',
+            isOwnMessage
+              ? 'hover:bg-white/10 text-white/80'
+              : 'hover:bg-gray-200 text-gray-600'
+          )}
+          title="Download"
+        >
+          <Download className="w-3 h-3" />
+        </a>      </div>
     </motion.div>
   );
 }
@@ -238,7 +292,13 @@ function DocumentMessage({
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.open(downloadUrl, '_blank');
+    // Create temporary link to trigger download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileInfo.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (

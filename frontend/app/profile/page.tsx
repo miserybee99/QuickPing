@@ -16,7 +16,7 @@ import { AvatarUploadDropzone } from '@/components/profile/avatar-upload-dropzon
 import { PageHeader, PageContainer, PageWrapper, PageScrollArea } from '@/components/layout';
 
 export default function ProfilePage() {
-  const { user } = useUser();
+  const { user, updateUser } = useUser();
   const [saving, setSaving] = useState(false);
 
   // Profile state
@@ -50,10 +50,10 @@ export default function ProfilePage() {
         avatar_url: url,
       });
       
-      // Update localStorage
+      // Update user globally (this will update navbar avatar too)
       if (user) {
         const updatedUser = { ...user, avatar_url: url };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        updateUser(updatedUser);
       }
     } catch (error) {
       console.error('Error updating avatar:', error);
@@ -71,10 +71,10 @@ export default function ProfilePage() {
         avatar_url: profile.avatar_url,
       });
       
-      // Update localStorage
+      // Update user globally (this will update navbar avatar too)
       if (user) {
         const updatedUser = { ...user, ...profile };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        updateUser(updatedUser);
       }
       
       alert('Profile updated successfully!');

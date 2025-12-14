@@ -55,23 +55,17 @@ function LoginContent() {
       });
       
       console.log('✅ Login success:', response.data);
-      const { token, user, requireVerification } = response.data;
+      const { token, user } = response.data;
       
+      // Save token and user to localStorage (only for verified users)
       if (typeof window !== 'undefined') {
         localStorage.clear();
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
-        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Use window.location.href to force a full page reload and avoid race conditions
+        window.location.href = '/';
       }
-      
-      // Check if email verification is required
-      if (requireVerification || (user && !user.is_verified)) {
-        router.push(`/verify-email?email=${encodeURIComponent(user.email)}`);
-        return;
-      }
-      
-      router.push('/');
-      router.refresh();
     } catch (err: any) {
       console.error('❌ Login error:', err.response?.data || err.message);
       const errorData = err.response?.data;
@@ -156,13 +150,12 @@ function LoginContent() {
                   <Label htmlFor="password" className="text-base font-medium">
                     Password
                   </Label>
-                  <button 
-                    type="button"
-                    onClick={() => alert('Password reset feature coming soon!')}
+                  <Link 
+                    href="/forgot-password"
                     className="text-sm text-primary hover:underline"
                   >
                     Forgot password?
-                  </button>
+                  </Link>
                 </div>
                 <div className="relative w-full">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none z-10" />

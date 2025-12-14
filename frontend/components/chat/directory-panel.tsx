@@ -13,6 +13,7 @@ import { AddMembersModal } from '@/components/modals/add-members-modal';
 import { RoleManagementModal } from '@/components/modals/role-management-modal';
 import { GroupSettingsModal } from '@/components/modals/group-settings-modal';
 import { useUserStatus } from '@/contexts/UserStatusContext';
+import { useSocket } from '@/contexts/SocketContext';
 import { RoleBadge, RoleIcon } from '@/components/ui/role-badge';
 import { StatusIndicator } from '@/components/ui/status-indicator';
 
@@ -31,6 +32,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const { isUserOnline } = useUserStatus();
+  const { socket } = useSocket();
 
   useEffect(() => {
     if (conversation) {
@@ -43,6 +45,71 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
       setCurrentUserRole('member');
     }
   }, [conversation]);
+
+  // Socket listener for realtime file updates
+  useEffect(() => {
+    if (!socket || !conversation) return;
+
+    const handleNewMessage = (data: any) => {
+      // If message contains a file, add it to files list
+      if (data.message && data.conversation_id === conversation._id) {
+        const msg = data.message;
+        if (msg.file_info || msg.type === 'file' || msg.type === 'image') {
+          const newFile: FileAttachment = {
+            _id: msg.file_info?.file_id || msg._id,
+            original_name: msg.file_info?.filename || 'File',
+            stored_name: msg.file_info?.filename || 'file',
+            url: msg.file_info?.url || '#',
+            mime_type: msg.file_info?.mime_type || 'application/octet-stream',
+            size: msg.file_info?.size || 0,
+            uploader_id: msg.sender_id,
+            conversation_id: conversation._id,
+            message_id: msg._id,
+            upload_date: msg.created_at,
+          };
+          setFiles(prev => [newFile, ...prev].slice(0, 10)); // Keep only latest 10 files
+        }
+      }
+    };
+
+    socket.on('message_received', handleNewMessage);
+
+    return () => {
+      socket.off('message_received', handleNewMessage);
+    };
+  }, [socket, conversation]);
+
+  useEffect(() => {
+    if (!socket || !conversation) return;
+
+    const handleNewMessage = (data: any) => {
+      // If message contains a file, add it to files list
+      if (data.message && data.conversation_id === conversation._id) {
+        const msg = data.message;
+        if (msg.file_info || msg.type === 'file' || msg.type === 'image') {
+          const newFile: FileAttachment = {
+            _id: msg.file_info?.file_id || msg._id,
+            original_name: msg.file_info?.filename || 'File',
+            stored_name: msg.file_info?.filename || 'file',
+            url: msg.file_info?.url || '#',
+            mime_type: msg.file_info?.mime_type || 'application/octet-stream',
+            size: msg.file_info?.size || 0,
+            uploader_id: msg.sender_id,
+            conversation_id: conversation._id,
+            message_id: msg._id,
+            upload_date: msg.created_at,
+          };
+          setFiles(prev => [newFile, ...prev].slice(0, 10)); // Keep only latest 10 files
+        }
+      }
+    };
+
+    socket.on('message_received', handleNewMessage);
+
+    return () => {
+      socket.off('message_received', handleNewMessage);
+    };
+  }, [socket, conversation]);
 
   const checkUserRole = () => {
     if (!conversation || conversation.type !== 'group') {

@@ -23,6 +23,7 @@ function VerifyEmailContent() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get email from localStorage if not in params
   useEffect(() => {
@@ -47,6 +48,12 @@ function VerifyEmailContent() {
       return;
     }
 
+    // Prevent double submission
+    if (isSubmitting || success) {
+      return;
+    }
+
+    setIsSubmitting(true);
     setLoading(true);
     setError('');
 
@@ -58,17 +65,30 @@ function VerifyEmailContent() {
 
       const { token, user } = response.data;
       
-      // Update localStorage
+      console.log('✅ OTP verified successfully:', { token: token?.slice(0, 20) + '...', user });
+      
+      // Update localStorage and clear pending verification flag
+      // Make sure user has is_verified = true
+      const verifiedUser = { ...user, is_verified: true };
       localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(verifiedUser));
+      localStorage.removeItem('pendingVerification');
+      
+      // Force a small delay to ensure localStorage is synced
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('📦 localStorage updated:', {
+        token: localStorage.getItem('token')?.slice(0, 20) + '...',
+        user: JSON.parse(localStorage.getItem('user') || '{}')
+      });
 
       setSuccess(true);
       
-      // Redirect after animation
+      // Hard redirect after animation to ensure fresh auth check
       setTimeout(() => {
-        router.push('/');
-        router.refresh();
-      }, 2000);
+        console.log('🔄 Redirecting to home...');
+        window.location.href = '/';
+      }, 1500);
 
     } catch (err: any) {
       const errorData = err.response?.data;
@@ -80,17 +100,18 @@ function VerifyEmailContent() {
       
       // Clear OTP on error
       setOTP('');
+      setIsSubmitting(false); // Only reset on error to allow retry
     } finally {
       setLoading(false);
     }
-  }, [otp, email, router]);
+  }, [otp, email, router, isSubmitting, success]);
 
   // Auto-submit when OTP is complete
   useEffect(() => {
-    if (otp.length === 6 && !loading) {
+    if (otp.length === 6 && !loading && !isSubmitting && !success) {
       handleVerify();
     }
-  }, [otp, loading, handleVerify]);
+  }, [otp, loading, isSubmitting, success, handleVerify]);
 
   const handleResend = async () => {
     try {
