@@ -41,6 +41,42 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
     }
   }, [isClient, user]);
 
+  // Mark selected conversation as read (update local state for immediate UI feedback)
+  useEffect(() => {
+    if (!selectedId || !user?._id) return;
+    
+    // When user selects a conversation, mark it as read locally
+    // This provides immediate UI feedback without waiting for socket events
+    const timer = setTimeout(() => {
+      setConversations((prev) => {
+        return prev.map((conv) => {
+          if (conv._id === selectedId && conv.last_message) {
+            // Check if current user already read it
+            const alreadyRead = conv.last_message.read_by?.some(
+              r => (typeof r.user_id === 'string' ? r.user_id : r.user_id?._id) === user._id
+            );
+            
+            if (!alreadyRead) {
+              return {
+                ...conv,
+                last_message: {
+                  ...conv.last_message,
+                  read_by: [
+                    ...(conv.last_message.read_by || []),
+                    { user_id: user._id, read_at: new Date() }
+                  ]
+                }
+              };
+            }
+          }
+          return conv;
+        });
+      });
+    }, 1500); // Wait a bit for the chat to load and mark as read
+    
+    return () => clearTimeout(timer);
+  }, [selectedId, user?._id]);
+
   // Socket.io listener for realtime conversation updates
   useEffect(() => {
     if (!socket) return;
@@ -105,14 +141,53 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
         });
       });
     };
+    
+    // Listen for message read receipts to update unread status
+    const handleMessagesReadReceipt = (data: { 
+      user_id: string; 
+      conversation_id: string; 
+      message_ids: string[];
+      read_at: Date;
+    }) => {
+      console.log('📖 Messages read receipt in conversation list:', data);
+      
+      setConversations((prev) => {
+        return prev.map((conv) => {
+          if (conv._id === data.conversation_id && conv.last_message) {
+            // Check if the read message is the last message
+            if (data.message_ids.includes(conv.last_message._id)) {
+              const alreadyRead = conv.last_message.read_by?.some(
+                r => (typeof r.user_id === 'string' ? r.user_id : r.user_id?._id?.toString()) === data.user_id
+              );
+              
+              if (!alreadyRead) {
+                return {
+                  ...conv,
+                  last_message: {
+                    ...conv.last_message,
+                    read_by: [
+                      ...(conv.last_message.read_by || []),
+                      { user_id: data.user_id, read_at: new Date(data.read_at) }
+                    ]
+                  }
+                };
+              }
+            }
+          }
+          return conv;
+        });
+      });
+    };
 
     socket.on('message_received', handleMessageReceived);
     socket.on('user_status_changed', handleUserStatusChanged);
+    socket.on('messages_read_receipt', handleMessagesReadReceipt);
 
     return () => {
       console.log('🔌 Cleaning up conversation list socket listeners');
       socket.off('message_received', handleMessageReceived);
       socket.off('user_status_changed', handleUserStatusChanged);
+      socket.off('messages_read_receipt', handleMessagesReadReceipt);
     };
   }, [socket]);
 
@@ -229,7 +304,7 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
   }
 
   return (
-    <div className="border-r border-gray-200 flex flex-col bg-white shadow-[1px_0px_0px_0px_rgba(0,0,0,0.08)] h-full">
+    <div className="border-r border-gray-200 flex flex-col bg-white shadow-[1px_0px_0px_0px_rgba(0,0,0,0.08)] h-screen overflow-hidden">
       {/* Header */}
       <div className="flex flex-col flex-shrink-0">
         <div className="flex items-center justify-between px-6 py-6">
@@ -310,7 +385,7 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
                       src={
                         conv.type === 'direct'
                           ? getFileUrl(conv.participants?.find(p => p.user_id?._id !== user?._id)?.user_id?.avatar_url)
-                          : undefined
+                          : conv.avatar_url ? getFileUrl(conv.avatar_url) : undefined
                       } 
                     />
                     <AvatarFallback className="rounded-xl bg-gray-200">

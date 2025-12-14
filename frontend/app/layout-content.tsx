@@ -106,9 +106,9 @@ export default function LayoutContent({
 
   // Authenticated user - show sidebar layout
   return (
-    <div className="grid h-screen overflow-hidden" style={{ gridTemplateColumns: '88px 1fr' }}>
+    <div className="flex h-screen w-screen overflow-hidden">
       <Sidebar />
-      <main className="h-full overflow-hidden">
+      <main className="flex-1 h-screen overflow-hidden">
         {children}
       </main>
     </div>

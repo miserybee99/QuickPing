@@ -152,6 +152,11 @@ const apiClient = {
     checkStatus: async (userId: string) => {
       return await api.get(`/friends/status/${userId}`);
     },
+    
+    // Remove friend (unfriend)
+    remove: async (friendId: string) => {
+      return await api.delete(`/friends/${friendId}`);
+    },
   },
   
   // ==========================================================================
@@ -242,6 +247,10 @@ const apiClient = {
     
     getById: async (voteId: string) => {
       return await api.get(`/votes/${voteId}`);
+    },
+    
+    delete: async (voteId: string) => {
+      return await api.delete(`/votes/${voteId}`);
     },
   },
   

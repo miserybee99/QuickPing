@@ -62,8 +62,8 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
   const [loading, setLoading] = useState(false);
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
-  const [isMembersExpanded, setIsMembersExpanded] = useState(true);
-  const [isFilesExpanded, setIsFilesExpanded] = useState(true);
+  const [isMembersExpanded, setIsMembersExpanded] = useState(false);
+  const [isFilesExpanded, setIsFilesExpanded] = useState(false);
   const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'moderator' | 'member'>('member');
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
@@ -109,12 +109,30 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
       }
     };
 
+    // Handle conversation updates (role changes, etc.)
+    const handleConversationUpdated = (data: any) => {
+      if (data.conversation && data.conversation._id === conversation._id) {
+        // Update the conversation in parent component
+        onConversationUpdated?.(data.conversation);
+        // Re-check user role with updated data
+        const currentUserId = typeof window !== 'undefined' && localStorage.getItem('user')
+          ? JSON.parse(localStorage.getItem('user')!)._id
+          : null;
+        const participant = data.conversation.participants?.find(
+          (p: any) => p.user_id?._id === currentUserId
+        );
+        setCurrentUserRole(participant?.role || 'member');
+      }
+    };
+
     socket.on('message_received', handleNewMessage);
+    socket.on('conversation_updated', handleConversationUpdated);
 
     return () => {
       socket.off('message_received', handleNewMessage);
+      socket.off('conversation_updated', handleConversationUpdated);
     };
-  }, [socket, conversation]);
+  }, [socket, conversation, onConversationUpdated]);
 
   const checkUserRole = () => {
     if (!conversation || conversation.type !== 'group') {
@@ -298,7 +316,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
   };
 
   return (
-    <div className="border-l border-gray-200 flex flex-col bg-white shadow-[1px_0px_0px_0px_rgba(0,0,0,0.08)] h-full">
+    <div className="border-l border-gray-200 flex flex-col bg-white shadow-[1px_0px_0px_0px_rgba(0,0,0,0.08)] h-screen overflow-hidden">
       {/* Header */}
       <div className="flex flex-col flex-shrink-0">
         <div className="flex items-center justify-between px-6 py-6">

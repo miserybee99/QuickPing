@@ -5,8 +5,6 @@ import {
   Camera,
   X,
   Save,
-  Globe,
-  Lock,
   Trash2,
   AlertTriangle,
   Users,
@@ -38,7 +36,6 @@ interface GroupSettingsModalProps {
   onDeleteGroup?: () => Promise<void>;
 }
 
-type PrivacyType = 'public' | 'private';
 type ConfirmAction = 'leave' | 'delete' | 'transfer' | null;
 
 export function GroupSettingsModal({
@@ -53,9 +50,8 @@ export function GroupSettingsModal({
 }: GroupSettingsModalProps) {
   const [name, setName] = useState(conversation.name || '');
   const [description, setDescription] = useState(conversation.description || '');
-  const [avatarUrl] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [privacy, setPrivacy] = useState<PrivacyType>('private');
   const [isSaving, setIsSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -75,7 +71,7 @@ export function GroupSettingsModal({
       setName(conversation.name || '');
       setDescription(conversation.description || '');
       setAvatarPreview(null);
-      setPrivacy('private');
+      setAvatarFile(null);
       setHasChanges(false);
       setConfirmAction(null);
       setSelectedNewAdmin(null);
@@ -102,6 +98,7 @@ export function GroupSettingsModal({
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -115,6 +112,23 @@ export function GroupSettingsModal({
 
     setIsSaving(true);
     try {
+      let newAvatarUrl: string | undefined;
+      
+      // Upload avatar if changed
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append('file', avatarFile);
+        formData.append('folder', 'group-avatars');
+        
+        const uploadResponse = await api.post('/files/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        if (uploadResponse.data?.file?.url) {
+          newAvatarUrl = uploadResponse.data.file.url;
+        }
+      }
+      
       const updateData: { name?: string; description?: string; avatar_url?: string } = {};
       
       if (name !== conversation.name) {
@@ -122,6 +136,9 @@ export function GroupSettingsModal({
       }
       if (description !== conversation.description) {
         updateData.description = description;
+      }
+      if (newAvatarUrl) {
+        updateData.avatar_url = newAvatarUrl;
       }
 
       const response = await api.put(`/conversations/${conversation._id}`, updateData);
@@ -210,7 +227,7 @@ export function GroupSettingsModal({
               onClick={handleAvatarClick}
             >
               <Avatar className="h-24 w-24 rounded-2xl border-4 border-white shadow-lg">
-                <AvatarImage src={avatarPreview || avatarUrl} />
+                <AvatarImage src={avatarPreview || conversation.avatar_url} />
                 <AvatarFallback className="rounded-2xl bg-[#615EF0] text-white text-2xl font-bold">
                   {groupInitial}
                 </AvatarFallback>
@@ -268,63 +285,7 @@ export function GroupSettingsModal({
             <p className="text-xs text-gray-400 text-right">{description.length}/500</p>
           </div>
 
-          {/* Privacy Settings */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Privacy</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => canEdit && setPrivacy('public')}
-                disabled={!canEdit}
-                className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
-                  privacy === 'public'
-                    ? "border-[#615EF0] bg-[#615EF0]/5"
-                    : "border-gray-200 hover:border-gray-300",
-                  !canEdit && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center",
-                  privacy === 'public' ? "bg-[#615EF0]/10" : "bg-gray-100"
-                )}>
-                  <Globe className={cn(
-                    "w-5 h-5",
-                    privacy === 'public' ? "text-[#615EF0]" : "text-gray-500"
-                  )} />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-sm">Public</p>
-                  <p className="text-xs text-gray-500">Anyone can find</p>
-                </div>
-              </button>
 
-              <button
-                onClick={() => canEdit && setPrivacy('private')}
-                disabled={!canEdit}
-                className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
-                  privacy === 'private'
-                    ? "border-[#615EF0] bg-[#615EF0]/5"
-                    : "border-gray-200 hover:border-gray-300",
-                  !canEdit && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center",
-                  privacy === 'private' ? "bg-[#615EF0]/10" : "bg-gray-100"
-                )}>
-                  <Lock className={cn(
-                    "w-5 h-5",
-                    privacy === 'private' ? "text-[#615EF0]" : "text-gray-500"
-                  )} />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-sm">Private</p>
-                  <p className="text-xs text-gray-500">Invite only</p>
-                </div>
-              </button>
-            </div>
-          </div>
 
           {/* Leave Group */}
           <div className="pt-4 border-t border-gray-200">

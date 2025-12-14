@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Moon, Sun, Type, Bell, Lock, User as UserIcon, X, Monitor, BellRing, BellOff, Settings, Save, Loader2 } from 'lucide-react';
+import { Moon, Sun, Bell, Lock, User as UserIcon, X, Monitor, BellRing, BellOff, Settings, Save, Loader2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useUser } from '@/hooks/useUser';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -21,12 +21,11 @@ import { AvatarUploadDropzone } from '@/components/profile/avatar-upload-dropzon
 import { Badge } from '@/components/ui/badge';
 
 type Theme = 'light' | 'dark' | 'system';
-type FontSize = 'small' | 'medium' | 'large';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user, updateUser } = useUser();
-  const { theme: savedTheme, setTheme: applySavedTheme, fontSize: savedFontSize, setFontSize: applySavedFontSize, resolvedTheme } = useTheme();
+  const { theme: savedTheme, setTheme: applySavedTheme, resolvedTheme } = useTheme();
   
   // Profile state
   const [profile, setProfile] = useState({
@@ -40,7 +39,6 @@ export default function SettingsPage() {
   
   // Pending (unsaved) settings - these are what user sees but not yet applied
   const [pendingTheme, setPendingTheme] = useState<Theme>(savedTheme);
-  const [pendingFontSize, setPendingFontSize] = useState<FontSize>(savedFontSize);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   // Load profile data
@@ -59,15 +57,13 @@ export default function SettingsPage() {
   // Sync pending state with saved state on mount
   useEffect(() => {
     setPendingTheme(savedTheme);
-    setPendingFontSize(savedFontSize);
-  }, [savedTheme, savedFontSize]);
+  }, [savedTheme]);
   
   // Track unsaved changes
   useEffect(() => {
     const themeChanged = pendingTheme !== savedTheme;
-    const fontSizeChanged = pendingFontSize !== savedFontSize;
-    setHasUnsavedChanges(themeChanged || fontSizeChanged);
-  }, [pendingTheme, pendingFontSize, savedTheme, savedFontSize]);
+    setHasUnsavedChanges(themeChanged);
+  }, [pendingTheme, savedTheme]);
   
   // Notification states
   const [notifications, setNotifications] = useState({
@@ -184,14 +180,10 @@ export default function SettingsPage() {
       if (pendingTheme !== savedTheme) {
         applySavedTheme(pendingTheme);
       }
-      if (pendingFontSize !== savedFontSize) {
-        applySavedFontSize(pendingFontSize);
-      }
       
       // Save to backend
       await apiClient.users.updatePreferences({
         theme: pendingTheme,
-        font_size: pendingFontSize,
         notifications,
         privacy,
       });
@@ -209,12 +201,10 @@ export default function SettingsPage() {
   
   const handleResetAppearance = () => {
     setPendingTheme(savedTheme);
-    setPendingFontSize(savedFontSize);
   };
   
   const handleResetToDefaults = () => {
     setPendingTheme('system');
-    setPendingFontSize('medium');
   };
 
   const handleLogout = () => {
@@ -420,75 +410,6 @@ export default function SettingsPage() {
                   ⚠️ You have unsaved changes. Click "Save Changes" to apply.
                 </p>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Type className="w-5 h-5" />
-                Font Size
-              </CardTitle>
-              <CardDescription>
-                Adjust font size in the application
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Font Size Options */}
-              <div className="space-y-3">
-                <div
-                  className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    pendingFontSize === 'small'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/50'
-                  }`}
-                  onClick={() => setPendingFontSize('small')}
-                >
-                  <span className="text-sm">Small (14px)</span>
-                  <div className={`w-4 h-4 rounded-full border-2 ${
-                    pendingFontSize === 'small' ? 'bg-primary border-primary' : 'border-muted-foreground'
-                  }`}></div>
-                </div>
-
-                <div
-                  className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    pendingFontSize === 'medium'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/50'
-                  }`}
-                  onClick={() => setPendingFontSize('medium')}
-                >
-                  <span className="text-base">Medium (16px)</span>
-                  <div className={`w-4 h-4 rounded-full border-2 ${
-                    pendingFontSize === 'medium' ? 'bg-primary border-primary' : 'border-muted-foreground'
-                  }`}></div>
-                </div>
-
-                <div
-                  className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    pendingFontSize === 'large'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/50'
-                  }`}
-                  onClick={() => setPendingFontSize('large')}
-                >
-                  <span className="text-lg">Large (18px)</span>
-                  <div className={`w-4 h-4 rounded-full border-2 ${
-                    pendingFontSize === 'large' ? 'bg-primary border-primary' : 'border-muted-foreground'
-                  }`}></div>
-                </div>
-              </div>
-
-              {/* Preview */}
-              <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                <p className="text-sm text-gray-500 mb-2">Preview:</p>
-                <p className="font-medium">
-                  The quick brown fox jumps over the lazy dog
-                </p>
-                <p className="text-gray-600">
-                  This is a sample text to preview font size
-                </p>
-              </div>
             </CardContent>
           </Card>
 

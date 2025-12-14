@@ -182,16 +182,16 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
     }
   }, [conversationId]);
   
-  // Fetch pinned messages when conversation loads
+  // Fetch pinned messages when conversation loads OR when messages load
   useEffect(() => {
-    if (conversation?.pinned_messages && conversation.pinned_messages.length > 0) {
+    if (conversation?.pinned_messages && conversation.pinned_messages.length > 0 && messages.length > 0) {
       // Pinned messages should already be populated from conversation fetch
       // We need to fetch full message objects for the pinned IDs
       fetchPinnedMessages();
-    } else {
+    } else if (!conversation?.pinned_messages || conversation.pinned_messages.length === 0) {
       setPinnedMessages([]);
     }
-  }, [conversation?.pinned_messages]);
+  }, [conversation?.pinned_messages, messages.length]);
 
   // Socket.io listeners for realtime messages
   useEffect(() => {
@@ -512,6 +512,32 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
     socket.on('thread_updated', handleThreadUpdated);
     socket.on('vote_updated', handleVoteUpdated);
     socket.on('new_vote', handleNewVote);
+    
+    // Listen for vote deletion
+    const handleVoteDeleted = (data: { vote_id: string; conversation_id: string }) => {
+      console.log('🗳️ Vote deleted:', data);
+      if (data.conversation_id === conversationId) {
+        setVotes(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(data.vote_id);
+          return newMap;
+        });
+      }
+    };
+    socket.on('vote_deleted', handleVoteDeleted);
+    
+    // Listen for friendship status changes
+    const handleFriendshipStatusChanged = (data: { user_id: string; friend_id: string; status: string }) => {
+      console.log('👫 Friendship status changed:', data);
+      // Update friendship status if this conversation involves the changed friendship
+      if (conversation?.type === 'direct') {
+        const otherUser = conversation.participants.find(p => p.user_id?._id !== currentUser?._id);
+        if (otherUser?.user_id?._id === data.user_id || otherUser?.user_id?._id === data.friend_id) {
+          setFriendshipStatus(data.status as 'none' | 'pending' | 'accepted' | 'rejected');
+        }
+      }
+    };
+    socket.on('friendship_status_changed', handleFriendshipStatusChanged);
 
     // Cleanup
     return () => {
@@ -529,6 +555,8 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       socket.off('thread_updated', handleThreadUpdated);
       socket.off('vote_updated', handleVoteUpdated);
       socket.off('new_vote', handleNewVote);
+      socket.off('vote_deleted', handleVoteDeleted);
+      socket.off('friendship_status_changed', handleFriendshipStatusChanged);
       socket.emit('leave_conversation', conversationId);
       
       // Clear typing indicators
@@ -865,6 +893,17 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   const isGroupChat = useMemo(() => {
     return conversation?.type === 'group';
   }, [conversation]);
+
+  // Get current user's role in the group
+  const currentUserRole = useMemo((): 'admin' | 'moderator' | 'member' => {
+    if (!currentUser || !conversation || conversation.type !== 'group') {
+      return 'member';
+    }
+    const participant = conversation.participants?.find(
+      p => p.user_id?._id?.toString() === currentUser._id?.toString()
+    );
+    return participant?.role || 'member';
+  }, [currentUser, conversation]);
   
   // Handle vote creation
   const handleCreateVote = async (voteData: {
@@ -935,6 +974,23 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       }
     } catch (error) {
       console.error('Error casting vote:', error);
+      throw error;
+    }
+  };
+
+  // Handle deleting a vote
+  const handleDeleteVote = async (voteId: string) => {
+    try {
+      await apiClient.votes.delete(voteId);
+      
+      // Remove from local state (socket event will also update this)
+      setVotes(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(voteId);
+        return newMap;
+      });
+    } catch (error) {
+      console.error('Error deleting vote:', error);
       throw error;
     }
   };
@@ -1492,9 +1548,9 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   const conversationName = getConversationName();
 
   return (
-    <div className="grid bg-white h-screen" style={{ gridTemplateRows: 'auto 1fr auto' }}>
+    <div className="flex flex-col bg-white h-screen overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col z-10">
+      <div className="flex-shrink-0 flex flex-col z-10">
         {/* Connection status banner */}
         {!isConnected && (
           <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-sm text-yellow-800 text-center">
@@ -1505,7 +1561,11 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
         <div className="h-20 flex items-center justify-between px-6">
           <div className="flex items-center gap-4 flex-1">
             <Avatar className="h-10 w-10 rounded-[10px]">
-              <AvatarImage src={getFileUrl(otherParticipant?.avatar_url)} />
+              <AvatarImage src={
+                conversation.type === 'direct' 
+                  ? getFileUrl(otherParticipant?.avatar_url)
+                  : conversation.avatar_url ? getFileUrl(conversation.avatar_url) : undefined
+              } />
               <AvatarFallback className="rounded-[10px] bg-gray-200">
                 {conversationName[0]?.toUpperCase() || 'U'}
               </AvatarFallback>
@@ -1530,12 +1590,12 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
             </div>
             {conversation.type === 'direct' && otherParticipant && (
               friendshipStatus === 'accepted' ? (
-                <div className="px-4 py-2 bg-green-500/10 text-green-600 rounded-lg text-sm font-semibold flex items-center gap-2">
+                <div className="h-10 px-4 bg-green-500/10 text-green-600 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 min-w-[130px]">
                   <Check className="w-4 h-4" />
                   Friend
                 </div>
               ) : friendshipStatus === 'pending' ? (
-                <div className="px-4 py-2 bg-amber-500/10 text-amber-600 rounded-lg text-sm font-semibold flex items-center gap-2">
+                <div className="h-10 px-4 bg-amber-500/10 text-amber-600 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 min-w-[130px]">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-amber-600">
                     <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4"/>
                   </svg>
@@ -1565,7 +1625,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                     }
                   }}
                   disabled={friendshipLoading}
-                  className="px-4 py-2 bg-[#615EF0] hover:bg-[#615EF0]/90 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
+                  className="h-10 px-4 bg-[#615EF0] hover:bg-[#615EF0]/90 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 min-w-[130px] disabled:opacity-50"
                   title="Add Friend"
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-white">
@@ -1581,7 +1641,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
             {/* AI Summarize Button */}
             <button 
               onClick={() => setShowAISummaryModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg hover:from-purple-500/20 hover:to-pink-500/20 transition-all group"
+              className="h-10 flex items-center gap-2 px-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg hover:from-purple-500/20 hover:to-pink-500/20 transition-all group min-w-[130px] justify-center"
               title="AI Summary"
             >
               <Sparkles className="w-5 h-5 text-purple-500 group-hover:text-purple-600" strokeWidth={1.5} />
@@ -1596,17 +1656,19 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       
       {/* Pinned Messages Section */}
       {pinnedMessages.length > 0 && (
-        <PinnedMessages
-          messages={pinnedMessages}
-          onJumpToMessage={scrollToMessage}
-          onUnpin={handleUnpinMessage}
-          canUnpin={canPinMessages}
-        />
+        <div className="flex-shrink-0">
+          <PinnedMessages
+            messages={pinnedMessages}
+            onJumpToMessage={scrollToMessage}
+            onUnpin={handleUnpinMessage}
+            canUnpin={canPinMessages}
+          />
+        </div>
       )}
       
       {/* Active Votes Section - Group chats only */}
       {isGroupChat && votes.size > 0 && (
-        <div className="border-b border-gray-200 bg-gray-50">
+        <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50">
           <button
             onClick={() => setIsVotesCollapsed(!isVotesCollapsed)}
             className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
@@ -1631,8 +1693,10 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                     key={vote._id}
                     vote={vote}
                     currentUserId={currentUser?._id || ''}
+                    currentUserRole={currentUserRole}
                     users={usersMap}
                     onVote={handleCastVote}
+                    onDelete={handleDeleteVote}
                   />
                 ))}
             </div>
@@ -1644,10 +1708,10 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       <div 
         ref={messagesContainerRef} 
         className={cn(
-          "px-6 py-6 bg-white overflow-y-auto relative",
+          "flex-1 px-6 py-6 bg-white relative",
           isDragOver && "ring-2 ring-[#615EF0] ring-inset"
         )}
-        style={{ height: '100%', minHeight: 0 }}
+        style={{ minHeight: 0, overflowY: 'auto' }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -1729,7 +1793,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                                 canPin={canPinMessages}
                                 onEdit={() => setEditingMessageId(messageId)}
                                 onReply={() => handleReply(msg)}
-                                onReact={() => handleAddReaction(messageId, '👍')}
+                                onReact={(emoji) => handleAddReaction(messageId, emoji)}
                                 onPin={() => pinnedMessages.some(p => p._id === messageId) 
                                   ? handleUnpinMessage(messageId) 
                                   : handlePinMessage(messageId)
@@ -1852,7 +1916,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                                 isPinned={pinnedMessages.some(p => p._id === messageId)}
                                 canPin={canPinMessages}
                                 onReply={() => handleReply(msg)}
-                                onReact={() => handleAddReaction(messageId, '👍')}
+                                onReact={(emoji) => handleAddReaction(messageId, emoji)}
                                 onPin={() => pinnedMessages.some(p => p._id === messageId) 
                                   ? handleUnpinMessage(messageId) 
                                   : handlePinMessage(messageId)
@@ -1965,26 +2029,30 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       {/* File Preview Area */}
       <AnimatePresence>
         {selectedFiles.length > 0 && (
-          <FilePreview
-            files={selectedFiles}
-            onRemove={handleRemoveFile}
-            disabled={sending}
-          />
+          <div className="flex-shrink-0">
+            <FilePreview
+              files={selectedFiles}
+              onRemove={handleRemoveFile}
+              disabled={sending}
+            />
+          </div>
         )}
       </AnimatePresence>
       
       {/* Reply Preview */}
       <AnimatePresence>
         {replyingTo && !activeThread && (
-          <ReplyPreview
-            replyingTo={replyingTo}
-            onCancel={handleCancelReply}
-          />
+          <div className="flex-shrink-0">
+            <ReplyPreview
+              replyingTo={replyingTo}
+              onCancel={handleCancelReply}
+            />
+          </div>
         )}
       </AnimatePresence>
 
       {/* Input */}
-      <div className="flex items-center gap-6 px-6 py-6 bg-white border-t border-gray-200 z-10">
+      <div className="flex-shrink-0 flex items-center gap-6 px-6 py-6 bg-white border-t border-gray-200 z-10">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}

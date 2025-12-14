@@ -122,6 +122,7 @@ export function RoleManagementModal({
   };
 
   const canChangeRole = currentUserRole === 'admin';
+  const canRemoveMember = currentUserRole === 'admin' || currentUserRole === 'moderator';
   const isRoleChanged = selectedRole !== currentRole;
 
   const roles: RoleType[] = ['admin', 'moderator', 'member'];
@@ -356,7 +357,7 @@ export function RoleManagementModal({
 
         {/* Footer Actions */}
         <div className="border-t p-4 flex gap-3">
-          {canChangeRole && (
+          {canRemoveMember && currentRole !== 'admin' && (
             <Button
               variant="outline"
               className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"

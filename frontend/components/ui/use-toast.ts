@@ -165,6 +165,11 @@ function toast({ ...props }: Toast_2) {
     } as ToasterToast,
   })
 
+  // Auto dismiss after TOAST_REMOVE_DELAY (5 seconds)
+  setTimeout(() => {
+    dismiss()
+  }, TOAST_REMOVE_DELAY)
+
   return {
     id: id,
     dismiss,

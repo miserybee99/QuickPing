@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, Clock, Users, RefreshCw, Trophy, Lock } from 'lucide-react';
+import { BarChart3, Clock, Users, RefreshCw, Trophy, Lock, Trash2, AlertTriangle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { VoteOptionComponent } from './vote-option';
 import { cn } from '@/lib/utils';
 import { Vote } from '@/types';
@@ -11,18 +12,24 @@ import { Vote } from '@/types';
 interface VoteMessageProps {
   vote: Vote;
   currentUserId: string;
+  currentUserRole?: 'admin' | 'moderator' | 'member';
   users: Map<string, { _id: string; username: string; avatar_url?: string }>;
   onVote: (voteId: string, optionIndex: number) => Promise<void>;
   onVoteUpdated?: (vote: Vote) => void;
+  onDelete?: (voteId: string) => Promise<void>;
 }
 
 export function VoteMessage({
   vote,
   currentUserId,
+  currentUserRole = 'member',
   users,
   onVote,
+  onDelete,
 }: VoteMessageProps) {
   const [isVoting, setIsVoting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [isExpired, setIsExpired] = useState(!vote.is_active);
@@ -88,6 +95,10 @@ export function VoteMessage({
   const hasVoted = selectedOptions.length > 0;
   const showResults = hasVoted || isExpired;
 
+  // Check if current user can delete this vote
+  const isCreator = vote.created_by?._id === currentUserId || vote.created_by === currentUserId;
+  const canDelete = isCreator || currentUserRole === 'admin' || currentUserRole === 'moderator';
+
   // Find winner (highest votes)
   const maxVotes = Math.max(...vote.options.map((opt) => opt.voters.length));
   const winnerIndices = vote.options
@@ -104,6 +115,20 @@ export function VoteMessage({
       console.error('Vote error:', error);
     } finally {
       setIsVoting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!onDelete || isDeleting) return;
+    
+    setIsDeleting(true);
+    try {
+      await onDelete(vote._id);
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error('Delete vote error:', error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -157,12 +182,23 @@ export function VoteMessage({
             <span className="text-xs text-gray-400">created a poll</span>
           </div>
         </div>
-        {vote.settings.anonymous && (
-          <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-            <Lock className="w-3 h-3" />
-            Anonymous
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {vote.settings.anonymous && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+              <Lock className="w-3 h-3" />
+              Anonymous
+            </div>
+          )}
+          {canDelete && onDelete && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              title="Delete poll"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Question */}
@@ -237,6 +273,52 @@ export function VoteMessage({
               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
               className="w-6 h-6 border-2 border-[#615EF0] border-t-transparent rounded-full"
             />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowDeleteConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full mx-auto mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-center mb-2">Delete Poll?</h3>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                This will permanently delete the poll and all votes. This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

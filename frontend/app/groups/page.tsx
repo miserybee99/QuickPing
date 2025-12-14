@@ -13,16 +13,21 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { Conversation } from '@/types';
 import { AddMembersModal } from '@/components/modals/add-members-modal';
+import { GroupSettingsModal } from '@/components/modals/group-settings-modal';
 import { PageHeader } from '@/components/layout';
 import { PageContainer, PageWrapper } from '@/components/layout';
+import { useUser } from '@/hooks/useUser';
 
 export default function GroupsPage() {
   const router = useRouter();
+  const { user } = useUser();
   const [groups, setGroups] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<Conversation | null>(null);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
+  const [settingsGroup, setSettingsGroup] = useState<Conversation | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     loadGroups();
@@ -268,7 +273,8 @@ export default function GroupsPage() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // TODO: Implement group settings
+                                  setSettingsGroup(group);
+                                  setSettingsOpen(true);
                                 }}
                                 title="Group settings"
                               >
@@ -294,6 +300,31 @@ export default function GroupsPage() {
             conversationId={selectedGroup._id}
             currentMembers={selectedGroup.participants.map((p) => p.user_id._id)}
             onMembersAdded={handleMembersAdded}
+          />
+        )}
+        
+        {/* Group Settings Modal */}
+        {settingsGroup && user && (
+          <GroupSettingsModal
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            conversation={settingsGroup}
+            currentUserId={user._id}
+            currentUserRole={getGroupRole(settingsGroup) as 'admin' | 'moderator' | 'member'}
+            onConversationUpdated={(updatedConv) => {
+              setGroups(groups.map(g => g._id === updatedConv._id ? updatedConv : g));
+              setSettingsGroup(updatedConv);
+            }}
+            onLeaveGroup={async () => {
+              await apiClient.conversations.removeParticipant(settingsGroup._id, user._id);
+              setGroups(groups.filter(g => g._id !== settingsGroup._id));
+              setSettingsOpen(false);
+            }}
+            onDeleteGroup={async () => {
+              // TODO: Implement delete group endpoint
+              setGroups(groups.filter(g => g._id !== settingsGroup._id));
+              setSettingsOpen(false);
+            }}
           />
         )}
       </PageContainer>

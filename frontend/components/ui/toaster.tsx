@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import {
   Toast,
@@ -7,26 +8,38 @@ import {
   ToastDescription,
   ToastTitle,
 } from "@/components/ui/toast"
+import { AnimatePresence, motion } from "framer-motion"
 
 export function Toaster() {
-  const { toasts } = useToast()
+  const { toasts, dismiss } = useToast()
 
   return (
-    <div className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:top-auto sm:bottom-0 sm:right-0 sm:flex-col md:max-w-[420px]">
-      {toasts.map(function ({ id, title, description, action, variant, ...props }) {
-        return (
-          <Toast key={id} variant={variant} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
+    <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 w-full max-w-[420px] pointer-events-none">
+      <AnimatePresence mode="popLayout">
+        {toasts.map(function ({ id, title, description, action, variant }) {
+          return (
+            <motion.div
+              key={id}
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="pointer-events-auto"
+            >
+              <Toast variant={variant}>
+                <div className="grid gap-1">
+                  {title && <ToastTitle>{title}</ToastTitle>}
+                  {description && (
+                    <ToastDescription>{description}</ToastDescription>
+                  )}
+                </div>
+                {action}
+                <ToastClose onClick={() => dismiss(id)} />
+              </Toast>
+            </motion.div>
+          )
+        })}
+      </AnimatePresence>
     </div>
   )
 }

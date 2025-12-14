@@ -21,6 +21,7 @@ export interface Conversation {
   type: 'direct' | 'group';
   name?: string;
   description?: string;
+  avatar_url?: string;
   participants: Array<{
     user_id: User;
     role: 'admin' | 'moderator' | 'member';

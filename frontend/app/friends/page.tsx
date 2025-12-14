@@ -9,13 +9,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { User } from '@/types';
 import { useUserStatus } from '@/contexts/UserStatusContext';
-import { useNotifications } from '@/contexts/NotificationContext';
 import { PageHeader } from '@/components/layout';
 import { PageContainer, PageWrapper } from '@/components/layout';
+import { toast } from '@/components/ui/use-toast';
 
 interface FriendRequest {
   _id: string;
@@ -28,13 +38,16 @@ interface FriendRequest {
 export default function FriendsPage() {
   const router = useRouter();
   const { isUserOnline } = useUserStatus();
-  const { refreshCounts } = useNotifications();
   const [searchQuery, setSearchQuery] = useState('');
   const [friends, setFriends] = useState<User[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [blocked, setBlocked] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [removeFriendDialog, setRemoveFriendDialog] = useState<{ open: boolean; friend: User | null }>({
+    open: false,
+    friend: null,
+  });
 
   useEffect(() => {
     loadData();
@@ -63,7 +76,6 @@ export default function FriendsPage() {
     try {
       await apiClient.friends.acceptRequest(friendshipId);
       await loadData(); // Reload
-      refreshCounts(); // Update notification badges
     } catch (error) {
       console.error('Error accepting request:', error);
     } finally {
@@ -76,7 +88,6 @@ export default function FriendsPage() {
     try {
       await apiClient.friends.rejectRequest(friendshipId);
       setRequests(requests.filter((r) => r._id !== friendshipId));
-      refreshCounts(); // Update notification badges
     } catch (error) {
       console.error('Error rejecting request:', error);
     } finally {
@@ -85,15 +96,25 @@ export default function FriendsPage() {
   };
 
   const handleRemoveFriend = async (userId: string) => {
-    if (!confirm('Are you sure you want to remove this friend?')) return;
-    
     setActionLoading(userId);
     try {
-    setFriends(friends.filter((f) => f._id !== userId));
+      await apiClient.friends.remove(userId);
+      setFriends(friends.filter((f) => f._id !== userId));
+      toast({
+        title: 'Success',
+        description: 'Friend removed successfully',
+        variant: 'success',
+      });
     } catch (error) {
       console.error('Error removing friend:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove friend',
+        variant: 'destructive',
+      });
     } finally {
       setActionLoading(null);
+      setRemoveFriendDialog({ open: false, friend: null });
     }
   };
 
@@ -252,7 +273,7 @@ export default function FriendsPage() {
                         size="sm"
                         variant="ghost"
                         className="text-destructive hover:text-destructive"
-                        onClick={() => handleRemoveFriend(friend._id)}
+                        onClick={() => setRemoveFriendDialog({ open: true, friend })}
                         disabled={actionLoading === friend._id}
                       >
                         <UserMinus className="h-4 w-4" />
@@ -379,6 +400,30 @@ export default function FriendsPage() {
             )}
           </TabsContent>
         </Tabs>
+        
+        {/* Remove Friend Confirmation Dialog */}
+        <AlertDialog 
+          open={removeFriendDialog.open} 
+          onOpenChange={(open) => setRemoveFriendDialog({ open, friend: open ? removeFriendDialog.friend : null })}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove Friend</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to remove <span className="font-semibold">{removeFriendDialog.friend?.username}</span> from your friends list? You can add them back later.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => removeFriendDialog.friend && handleRemoveFriend(removeFriendDialog.friend._id)}
+              >
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </PageContainer>
     </PageWrapper>
   );

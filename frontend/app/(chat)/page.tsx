@@ -58,7 +58,7 @@ function ChatContent() {
   }
 
   return (
-    <div className="grid h-full bg-background" style={{ gridTemplateColumns: '349px 1fr 362px' }}>
+    <div className="grid h-screen" style={{ gridTemplateColumns: '349px 1fr 362px' }}>
       {/* Messages List */}
       <MessagesPanel 
         selectedId={selectedConversationId}
@@ -66,10 +66,12 @@ function ChatContent() {
       />
       
       {/* Chat Window */}
-      <ChatPanel 
-        conversationId={selectedConversationId}
-        onConversationLoaded={setSelectedConversation}
-      />
+      <div className="h-screen overflow-hidden">
+        <ChatPanel 
+          conversationId={selectedConversationId}
+          onConversationLoaded={setSelectedConversation}
+        />
+      </div>
       
       {/* Directory (Team Members & Files) */}
       <DirectoryPanel 

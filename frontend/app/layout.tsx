@@ -5,7 +5,6 @@ import { SocketProvider } from '@/contexts/SocketContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { UserStatusProvider } from '@/contexts/UserStatusContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { NotificationProvider } from '@/contexts/NotificationContext';
 import { Toaster } from '@/components/ui/toaster';
 import LayoutContent from './layout-content';
 
@@ -57,10 +56,8 @@ export default function RootLayout({
           <SocketProvider>
             <SidebarProvider>
               <UserStatusProvider>
-                <NotificationProvider>
-                  <LayoutContent>{children}</LayoutContent>
-                  <Toaster />
-                </NotificationProvider>
+                <LayoutContent>{children}</LayoutContent>
+                <Toaster />
               </UserStatusProvider>
             </SidebarProvider>
           </SocketProvider>
