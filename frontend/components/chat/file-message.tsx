@@ -48,7 +48,14 @@ async function downloadFile(fileInfo: FileInfo): Promise<void> {
     });
 
     if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`);
+      // Try to get error message from response
+      try {
+        const errorData = await response.json();
+        alert(errorData.error || `Download failed: ${response.status}`);
+      } catch {
+        alert(`Download failed: ${response.status}`);
+      }
+      return;
     }
 
     const blob = await response.blob();
@@ -62,8 +69,7 @@ async function downloadFile(fileInfo: FileInfo): Promise<void> {
     document.body.removeChild(a);
   } catch (error) {
     console.error('Download error:', error);
-    // Fallback: open in new tab
-    window.open(getFileUrl(fileInfo.url || ''), '_blank');
+    alert('Không thể tải file. Vui lòng thử lại.');
   }
 }
 

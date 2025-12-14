@@ -353,11 +353,18 @@ router.get('/proxy-download', authenticate, async (req, res) => {
     const downloadFilename = filename || decodedUrl.split('/').pop()?.split('?')[0] || 'download';
 
     // Handle local uploads
-    if (url.startsWith('/uploads/')) {
+    if (url.startsWith('/uploads/') || decodedUrl.startsWith('/uploads/')) {
       const localFilePath = path.join(uploadsDir, url.replace('/uploads/', ''));
       
       if (!fs.existsSync(localFilePath)) {
-        return res.status(404).json({ error: 'File not found on disk' });
+        console.log('❌ Local file not found:', localFilePath);
+        // On production (Render), local files are ephemeral and get deleted on restart
+        const isProduction = process.env.NODE_ENV === 'production';
+        return res.status(404).json({ 
+          error: isProduction 
+            ? 'File không còn tồn tại. File này được upload vào local storage và đã bị xóa khi server restart. Vui lòng upload lại.' 
+            : 'File not found on disk'
+        });
       }
 
       const stats = fs.statSync(localFilePath);
