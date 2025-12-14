@@ -1,7 +1,17 @@
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
+
+// Initialize Resend client if API key is available
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Create transporter based on environment
 const createTransporter = () => {
+  // If Resend is configured, use it instead of SMTP
+  if (resend) {
+    console.log('📧 Using Resend API for email delivery');
+    return null; // We'll use resend directly
+  }
+  
   // Check if we have SMTP credentials configured
   if (process.env.SMTP_USER && process.env.SMTP_PASS) {
     console.log('📧 Using configured SMTP server');
@@ -113,31 +123,54 @@ Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.
  */
 export const sendOTPEmail = async (email, username, otp) => {
   try {
-    const mailOptions = {
-      from: `"QuickPing" <${process.env.SMTP_USER || 'noreply@quickping.app'}>`,
-      to: email,
-      subject: '🔐 [QuickPing] Mã xác thực email của bạn',
-      html: generateOTPEmailHTML(username, otp),
-      text: generateOTPEmailText(username, otp)
-    };
+    const subject = '🔐 [QuickPing] Mã xác thực email của bạn';
+    const htmlContent = generateOTPEmailHTML(username, otp);
+    const textContent = generateOTPEmailText(username, otp);
 
-    // If no transporter (dev mode), log to console
-    if (!transporter) {
-      console.log('═══════════════════════════════════════════════════');
-      console.log('📧 EMAIL WOULD BE SENT (Development Mode):');
-      console.log('═══════════════════════════════════════════════════');
-      console.log(`To: ${email}`);
-      console.log(`Subject: ${mailOptions.subject}`);
-      console.log(`OTP Code: ${otp}`);
-      console.log('═══════════════════════════════════════════════════');
-      return { success: true, messageId: 'dev-mode-' + Date.now() };
+    // Use Resend API if configured (best for production)
+    if (resend) {
+      console.log('📧 Sending email via Resend API...');
+      const { data, error } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL || 'QuickPing <onboarding@resend.dev>',
+        to: [email],
+        subject: subject,
+        html: htmlContent,
+        text: textContent
+      });
+
+      if (error) {
+        console.error('❌ Resend error:', error);
+        throw new Error('Failed to send email: ' + error.message);
+      }
+
+      console.log('📧 Email sent successfully via Resend:', data.id);
+      return { success: true, messageId: data.id };
     }
 
-    const info = await transporter.sendMail(mailOptions);
-    
-    console.log('📧 Email sent successfully:', info.messageId);
-    
-    return { success: true, messageId: info.messageId };
+    // Use SMTP transporter if configured
+    if (transporter) {
+      const mailOptions = {
+        from: `"QuickPing" <${process.env.SMTP_USER || 'noreply@quickping.app'}>`,
+        to: email,
+        subject: subject,
+        html: htmlContent,
+        text: textContent
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log('📧 Email sent successfully via SMTP:', info.messageId);
+      return { success: true, messageId: info.messageId };
+    }
+
+    // Development mode - log to console
+    console.log('═══════════════════════════════════════════════════');
+    console.log('📧 EMAIL WOULD BE SENT (Development Mode):');
+    console.log('═══════════════════════════════════════════════════');
+    console.log(`To: ${email}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`OTP Code: ${otp}`);
+    console.log('═══════════════════════════════════════════════════');
+    return { success: true, messageId: 'dev-mode-' + Date.now() };
   } catch (error) {
     console.error('❌ Email send error:', error);
     throw new Error('Failed to send email: ' + error.message);
@@ -149,6 +182,11 @@ export const sendOTPEmail = async (email, username, otp) => {
  * @returns {Promise<boolean>}
  */
 export const verifyEmailConnection = async () => {
+  if (resend) {
+    console.log('✅ Email service ready (Resend API)');
+    return true;
+  }
+  
   if (!transporter) {
     console.log('📧 Email service in development mode (no SMTP configured)');
     return true;
@@ -254,31 +292,54 @@ Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua emai
  */
 export const sendPasswordResetOTPEmail = async (email, username, otp) => {
   try {
-    const mailOptions = {
-      from: `"QuickPing Security" <${process.env.SMTP_USER || 'noreply@quickping.app'}>`,
-      to: email,
-      subject: '🔐 [QuickPing] Mã xác thực đặt lại mật khẩu',
-      html: generatePasswordResetOTPEmailHTML(username, otp),
-      text: generatePasswordResetOTPEmailText(username, otp)
-    };
+    const subject = '🔐 [QuickPing] Mã xác thực đặt lại mật khẩu';
+    const htmlContent = generatePasswordResetOTPEmailHTML(username, otp);
+    const textContent = generatePasswordResetOTPEmailText(username, otp);
 
-    // If no transporter (dev mode), log to console
-    if (!transporter) {
-      console.log('═══════════════════════════════════════════════════');
-      console.log('📧 PASSWORD RESET EMAIL (Development Mode):');
-      console.log('═══════════════════════════════════════════════════');
-      console.log(`To: ${email}`);
-      console.log(`Subject: ${mailOptions.subject}`);
-      console.log(`OTP Code: ${otp}`);
-      console.log('═══════════════════════════════════════════════════');
-      return { success: true, messageId: 'dev-mode-' + Date.now() };
+    // Use Resend API if configured (best for production)
+    if (resend) {
+      console.log('📧 Sending password reset email via Resend API...');
+      const { data, error } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL || 'QuickPing <onboarding@resend.dev>',
+        to: [email],
+        subject: subject,
+        html: htmlContent,
+        text: textContent
+      });
+
+      if (error) {
+        console.error('❌ Resend error:', error);
+        throw new Error('Failed to send email: ' + error.message);
+      }
+
+      console.log('📧 Password reset email sent successfully via Resend:', data.id);
+      return { success: true, messageId: data.id };
     }
 
-    const info = await transporter.sendMail(mailOptions);
-    
-    console.log('📧 Password reset email sent successfully:', info.messageId);
-    
-    return { success: true, messageId: info.messageId };
+    // Use SMTP transporter if configured
+    if (transporter) {
+      const mailOptions = {
+        from: `"QuickPing Security" <${process.env.SMTP_USER || 'noreply@quickping.app'}>`,
+        to: email,
+        subject: subject,
+        html: htmlContent,
+        text: textContent
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log('📧 Password reset email sent successfully via SMTP:', info.messageId);
+      return { success: true, messageId: info.messageId };
+    }
+
+    // Development mode - log to console
+    console.log('═══════════════════════════════════════════════════');
+    console.log('📧 PASSWORD RESET EMAIL (Development Mode):');
+    console.log('═══════════════════════════════════════════════════');
+    console.log(`To: ${email}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`OTP Code: ${otp}`);
+    console.log('═══════════════════════════════════════════════════');
+    return { success: true, messageId: 'dev-mode-' + Date.now() };
   } catch (error) {
     console.error('❌ Password reset email error:', error);
     throw new Error('Failed to send password reset email: ' + error.message);
