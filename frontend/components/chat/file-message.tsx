@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Play, ExternalLink } from 'lucide-react';
+import { Download, Play, ExternalLink, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { FileTypeIcon, formatFileSize, getFileCategory, isPreviewable } from './file-type-icon';
 import { cn } from '@/lib/utils';
@@ -21,20 +21,57 @@ interface FileMessageProps {
   onPreview?: (file: FileInfo) => void;
 }
 
+// Download file with authentication
+async function downloadFile(fileInfo: FileInfo): Promise<void> {
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001').replace('/api', '');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  
+  let downloadUrl: string;
+  
+  // Prioritize URL for download (works with both Cloudinary and local storage)
+  if (fileInfo.url) {
+    downloadUrl = `${baseUrl}/api/files/proxy-download?url=${encodeURIComponent(fileInfo.url)}&filename=${encodeURIComponent(fileInfo.filename)}`;
+  } else if (fileInfo.file_id) {
+    // Extract string ID if file_id is an object
+    const fileId = typeof fileInfo.file_id === 'object' 
+      ? (fileInfo.file_id as any)?._id || String(fileInfo.file_id)
+      : fileInfo.file_id;
+    downloadUrl = `${baseUrl}/api/files/${fileId}/download`;
+  } else {
+    console.error('No file_id or url available');
+    return;
+  }
+
+  try {
+    const response = await fetch(downloadUrl, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileInfo.filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error('Download error:', error);
+    // Fallback: open in new tab
+    window.open(getFileUrl(fileInfo.url || ''), '_blank');
+  }
+}
+
 export function FileMessage({ fileInfo, isOwnMessage, onPreview }: FileMessageProps) {
   const category = getFileCategory(fileInfo.mime_type);
   const canPreview = isPreviewable(fileInfo.mime_type);
   // File URL used by child components
   void canPreview; // Mark as intentionally unused for now
-
-  // Debug: Log file info
-  console.log('🖼️ FileMessage rendering:', {
-    filename: fileInfo.filename,
-    mime_type: fileInfo.mime_type,
-    category: category,
-    url: fileInfo.url,
-    file_id: fileInfo.file_id
-  });
 
   // Render based on file type
   switch (category) {
@@ -80,7 +117,7 @@ function ImageMessage({
 }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
-  const imageUrl = fileInfo.url || `/api/files/${fileInfo.file_id}/download`;
+  const imageUrl = getFileUrl(fileInfo.url || `/api/files/${fileInfo.file_id}/download`);
 
   if (error) {
     return (
@@ -120,23 +157,22 @@ function ImageMessage({
       {/* Hover overlay with download button */}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-2">
         <ExternalLink 
-          className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
             onPreview?.(fileInfo);
           }}
         />
-        <a
-          href={fileInfo.url || `/api/files/${fileInfo.file_id}/download`}
-          download={fileInfo.filename}
+        <button
           onClick={(e) => {
             e.stopPropagation();
+            downloadFile(fileInfo);
           }}
           className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 inline-flex items-center justify-center"
           title="Download"
         >
           <Download className="w-8 h-8" />
-        </a>
+        </button>
       </div>
       
       {/* File info */}
@@ -162,7 +198,7 @@ function VideoMessage({
   onPreview?: (file: FileInfo) => void;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const videoUrl = fileInfo.url || `/api/files/${fileInfo.file_id}/download`;
+  const videoUrl = getFileUrl(fileInfo.url || `/api/files/${fileInfo.file_id}/download`);
 
   return (
     <motion.div
@@ -187,17 +223,16 @@ function VideoMessage({
             <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors">
               <Play className="w-6 h-6 text-gray-900 ml-1" fill="currentColor" />
             </div>
-            <a
-              href={fileInfo.url || `/api/files/${fileInfo.file_id}/download`}
-              download={fileInfo.filename}
+            <button
               onClick={(e) => {
                 e.stopPropagation();
+                downloadFile(fileInfo);
               }}
               className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors opacity-0 group-hover/video:opacity-100"
               title="Download video"
             >
               <Download className="w-5 h-5 text-gray-900" />
-            </a>
+            </button>
           </div>
         </div>
       )}
@@ -216,11 +251,10 @@ function VideoMessage({
         )}>
           {formatFileSize(fileInfo.size)}
         </span>
-        <a
-          href={fileInfo.url || `/api/files/${fileInfo.file_id}/download`}
-          download={fileInfo.filename}
+        <button
           onClick={(e) => {
             e.stopPropagation();
+            downloadFile(fileInfo);
           }}
           className={cn(
             'p-1 rounded transition-colors inline-flex items-center',
@@ -231,7 +265,8 @@ function VideoMessage({
           title="Download"
         >
           <Download className="w-3 h-3" />
-        </a>      </div>
+        </button>
+      </div>
     </motion.div>
   );
 }
@@ -244,7 +279,7 @@ function AudioMessage({
   fileInfo: FileInfo;
   isOwnMessage: boolean;
 }) {
-  const audioUrl = fileInfo.url || `/api/files/${fileInfo.file_id}/download`;
+  const audioUrl = getFileUrl(fileInfo.url || `/api/files/${fileInfo.file_id}/download`);
 
   return (
     <motion.div
@@ -288,18 +323,7 @@ function DocumentMessage({
   canPreview?: boolean;
   onPreview?: (file: FileInfo) => void;
 }) {
-  const downloadUrl = fileInfo.url || `/api/files/${fileInfo.file_id}/download`;
-
-  const handleDownload = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Create temporary link to trigger download
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = fileInfo.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const downloadUrl = getFileUrl(fileInfo.url || `/api/files/${fileInfo.file_id}/download`);
 
   return (
     <motion.div
@@ -335,9 +359,12 @@ function DocumentMessage({
       </div>
       
       <button
-        onClick={handleDownload}
+        onClick={(e) => {
+          e.stopPropagation();
+          downloadFile(fileInfo);
+        }}
         className={cn(
-          'p-2 rounded-full flex-shrink-0 transition-colors',
+          'p-2 rounded-full flex-shrink-0 transition-colors inline-flex items-center justify-center',
           isOwnMessage
             ? 'hover:bg-white/20 text-white'
             : 'hover:bg-gray-200 text-gray-600'

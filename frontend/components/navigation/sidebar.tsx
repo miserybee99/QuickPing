@@ -10,7 +10,6 @@ import {
   User,
   Settings,
   Bell,
-  FolderOpen,
   LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,7 +28,6 @@ const mainNavigation = [
 // Secondary navigation items
 const secondaryNavigation = [
   { name: 'Notifications', href: '/notifications', icon: Bell },
-  { name: 'Files', href: '/files', icon: FolderOpen },
 ];
 
 interface NavItemProps {

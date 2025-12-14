@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import vi from 'date-fns/locale/vi';
 import api from '@/lib/api';
 import { apiClient } from '@/lib/api-client';
+import { toast } from '@/components/ui/use-toast';
 import { Conversation, Message, User, Vote as VoteType } from '@/types';
 import { cn, formatLastSeen } from '@/lib/utils';
 import { getFileUrl } from '@/lib/file-utils';
@@ -103,7 +104,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   // Phase 4: Vote state
   const [votes, setVotes] = useState<Map<string, VoteType>>(new Map());
   const [showCreateVoteModal, setShowCreateVoteModal] = useState(false);
-  const [isVotesCollapsed, setIsVotesCollapsed] = useState(false);
+  const [isVotesCollapsed, setIsVotesCollapsed] = useState(true);
   
   // Phase 6: AI Summary state
   const [showAISummaryModal, setShowAISummaryModal] = useState(false);
@@ -1467,9 +1468,9 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   const conversationName = getConversationName();
 
   return (
-    <div className="flex flex-col bg-white h-full overflow-hidden">
+    <div className="grid bg-white h-screen" style={{ gridTemplateRows: 'auto 1fr auto' }}>
       {/* Header */}
-      <div className="flex flex-col flex-shrink-0 z-10">
+      <div className="flex flex-col z-10">
         {/* Connection status banner */}
         {!isConnected && (
           <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-sm text-yellow-800 text-center">
@@ -1508,14 +1509,18 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                 onClick={async () => {
                   try {
                     await apiClient.friends.sendRequest(otherParticipant._id);
-                    alert('Friend request sent!');
+                    toast({
+                      title: "Success!",
+                      description: "Friend request sent successfully.",
+                      variant: "success"
+                    });
                   } catch (error: any) {
                     const errorMsg = error?.response?.data?.error || 'Failed to send friend request';
-                    if (errorMsg.includes('already friends') || errorMsg.includes('already sent')) {
-                      alert(errorMsg);
-                    } else {
-                      alert('Failed to send friend request');
-                    }
+                    toast({
+                      title: "Error",
+                      description: errorMsg,
+                      variant: "destructive"
+                    });
                   }
                 }}
                 className="px-4 py-2 bg-[#615EF0] hover:bg-[#615EF0]/90 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
@@ -1596,10 +1601,10 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       <div 
         ref={messagesContainerRef} 
         className={cn(
-          "flex-1 px-6 py-6 bg-white overflow-y-scroll relative",
+          "px-6 py-6 bg-white overflow-y-auto relative",
           isDragOver && "ring-2 ring-[#615EF0] ring-inset"
         )}
-        style={{ minHeight: 0 }}
+        style={{ height: '100%', minHeight: 0 }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -1936,7 +1941,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       </AnimatePresence>
 
       {/* Input */}
-      <div className="flex items-center gap-6 px-6 py-6 flex-shrink-0 bg-white border-t border-gray-200 z-10">
+      <div className="flex items-center gap-6 px-6 py-6 bg-white border-t border-gray-200 z-10">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}

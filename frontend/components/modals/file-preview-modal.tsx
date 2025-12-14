@@ -1,9 +1,36 @@
 'use client';
 
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, Trash2, ExternalLink } from 'lucide-react';
+import { X, Download, Trash2, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getFileUrl } from '@/lib/file-utils';
+
+// Download file with authentication
+async function downloadFileWithAuth(url: string, filename: string): Promise<void> {
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001').replace('/api', '');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  
+  const downloadUrl = `${baseUrl}/api/files/proxy-download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+
+  const response = await fetch(downloadUrl, {
+    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+  });
+
+  if (!response.ok) {
+    throw new Error(`Download failed: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(blobUrl);
+  document.body.removeChild(a);
+}
 
 interface FilePreviewModalProps {
   file: {
@@ -25,6 +52,8 @@ export function FilePreviewModal({
   onDownload,
   onDelete,
 }: FilePreviewModalProps) {
+  const [isDownloading, setIsDownloading] = useState(false);
+
   if (!file) return null;
 
   const formatFileSize = (bytes: number): string => {
@@ -33,6 +62,19 @@ export function FilePreviewModal({
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      await downloadFileWithAuth(file.url, file.name);
+    } catch (error) {
+      console.error('Download error:', error);
+      // Fallback: open in new tab
+      window.open(getFileUrl(file.url), '_blank');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const renderPreview = () => {
@@ -108,19 +150,25 @@ export function FilePreviewModal({
               </div>
               
               <div className="flex gap-2">
-                {onDownload && (
-                  <Button size="sm" variant="secondary" onClick={onDownload}>
+                <button
+                  onClick={handleDownload}
+                  disabled={isDownloading}
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium h-9 px-3 bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+                >
+                  {isDownloading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
                     <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button>
-                )}
+                  )}
+                  {isDownloading ? 'Downloading...' : 'Download'}
+                </button>
                 {onDelete && (
                   <Button size="sm" variant="destructive" onClick={onDelete}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
-                <Button size="sm" variant="ghost" onClick={onClose} className="text-white">
-                  <X className="h-4 w-4" />
+                <Button size="sm" variant="ghost" onClick={onClose} className="text-white hover:bg-white/20">
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
             </motion.div>

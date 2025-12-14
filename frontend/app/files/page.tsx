@@ -32,12 +32,52 @@ export default function FilesPage() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Files are loaded per conversation in the chat panel
-    // This page shows all files from user's conversations
-    // For now, show empty state - files are accessed within conversations
-    setLoading(false);
-    setFiles([]);
+    fetchAllFiles();
   }, []);
+
+  const fetchAllFiles = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/conversations', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch conversations');
+      
+      const data = await response.json();
+      const conversations = data.conversations || [];
+      
+      // Extract all files from all conversations
+      const allFiles: FileItem[] = [];
+      conversations.forEach((conv: any) => {
+        if (conv.files && Array.isArray(conv.files)) {
+          conv.files.forEach((file: any) => {
+            allFiles.push({
+              _id: file._id,
+              name: file.filename,
+              type: file.mime_type,
+              size: file.size,
+              url: file.url,
+              uploader: file.uploader || { _id: '', username: 'Unknown' },
+              conversation: { _id: conv._id, name: conv.name || 'Unknown' },
+              created_at: new Date(file.uploaded_at)
+            });
+          });
+        }
+      });
+      
+      // Sort by date (newest first)
+      allFiles.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+      
+      setFiles(allFiles);
+    } catch (error) {
+      console.error('Failed to fetch files:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
 
@@ -67,7 +107,14 @@ export default function FilesPage() {
   const handleDownload = (file: FileItem) => {
     if (file.url) {
       const downloadUrl = getFileUrl(file.url);
-      window.open(downloadUrl, '_blank');
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = file.name;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 

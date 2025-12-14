@@ -327,6 +327,73 @@ router.post('/upload-multiple', authenticate, (req, res, next) => {
   }
 });
 
+// Proxy download by URL (for files not in database)
+// MUST be defined BEFORE /:fileId routes to avoid matching "proxy-download" as fileId
+router.get('/proxy-download', authenticate, async (req, res) => {
+  try {
+    const { url, filename } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+
+    const downloadFilename = filename || url.split('/').pop() || 'download';
+
+    // Handle local uploads
+    if (url.startsWith('/uploads/')) {
+      const localFilePath = path.join(uploadsDir, url.replace('/uploads/', ''));
+      
+      if (!fs.existsSync(localFilePath)) {
+        return res.status(404).json({ error: 'File not found on disk' });
+      }
+
+      const stats = fs.statSync(localFilePath);
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadFilename)}"`);
+      res.setHeader('Content-Length', stats.size);
+      
+      const fileStream = fs.createReadStream(localFilePath);
+      fileStream.pipe(res);
+      return;
+    }
+
+    // Only allow Cloudinary URLs for security
+    if (!url.includes('cloudinary.com')) {
+      return res.status(403).json({ error: 'Invalid URL' });
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.status}`);
+    }
+
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const contentLength = response.headers.get('content-length');
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadFilename)}"`);
+    res.setHeader('Content-Type', contentType);
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
+    }
+
+    // Stream the response body to client
+    const reader = response.body.getReader();
+    const pump = async () => {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          res.end();
+          break;
+        }
+        res.write(Buffer.from(value));
+      }
+    };
+    await pump();
+  } catch (error) {
+    console.error('Proxy download error:', error);
+    res.status(500).json({ error: 'Download failed' });
+  }
+});
+
 // Get file info
 router.get('/:fileId', authenticate, async (req, res) => {
   try {
@@ -386,9 +453,38 @@ router.get('/:fileId/download', authenticate, async (req, res) => {
                              file.metadata?.storage === 'cloudinary';
 
     if (isCloudinaryFile) {
-      // For Cloudinary files, redirect to the URL with download flag
-      const downloadUrl = file.url.replace('/upload/', '/upload/fl_attachment/');
-      return res.redirect(downloadUrl);
+      // Proxy download from Cloudinary to avoid CORS issues
+      try {
+        const response = await fetch(file.url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file: ${response.status}`);
+        }
+        
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`);
+        res.setHeader('Content-Type', file.mime_type);
+        if (file.size) {
+          res.setHeader('Content-Length', file.size);
+        }
+        
+        // Stream the response body to client
+        const reader = response.body.getReader();
+        const pump = async () => {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              res.end();
+              break;
+            }
+            res.write(Buffer.from(value));
+          }
+        };
+        await pump();
+      } catch (fetchError) {
+        console.error('Cloudinary fetch error:', fetchError);
+        // Fallback to redirect
+        const downloadUrl = file.url.replace('/upload/', '/upload/fl_attachment/');
+        return res.redirect(downloadUrl);
+      }
     } else {
       // Local file download
       const filePath = path.join(uploadsDir, file.stored_name);

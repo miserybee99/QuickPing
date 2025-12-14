@@ -6,6 +6,7 @@ import { SidebarProvider } from '@/contexts/SidebarContext';
 import { UserStatusProvider } from '@/contexts/UserStatusContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { Toaster } from '@/components/ui/toaster';
 import LayoutContent from './layout-content';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -58,6 +59,7 @@ export default function RootLayout({
               <UserStatusProvider>
                 <NotificationProvider>
                   <LayoutContent>{children}</LayoutContent>
+                  <Toaster />
                 </NotificationProvider>
               </UserStatusProvider>
             </SidebarProvider>

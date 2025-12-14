@@ -51,7 +51,8 @@ const messageSchema = new mongoose.Schema({
     },
     filename: String,
     mime_type: String,
-    size: Number
+    size: Number,
+    url: String
   },
   reply_to: {
     type: mongoose.Schema.Types.ObjectId,

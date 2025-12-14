@@ -17,6 +17,40 @@ import { useSocket } from '@/contexts/SocketContext';
 import { RoleBadge, RoleIcon } from '@/components/ui/role-badge';
 import { StatusIndicator } from '@/components/ui/status-indicator';
 
+// Download file with authentication
+async function downloadFileFromUrl(file: FileAttachment): Promise<void> {
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001').replace('/api', '');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  
+  if (!file.url || file.url === '#') return;
+
+  const downloadUrl = `${baseUrl}/api/files/proxy-download?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.original_name)}`;
+
+  try {
+    const response = await fetch(downloadUrl, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.original_name;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error('Download error:', error);
+    // Fallback: open in new tab
+    window.open(file.url, '_blank');
+  }
+}
+
 interface DirectoryPanelProps {
   conversation?: Conversation | null;
   onConversationUpdated?: (conversation: Conversation) => void;
@@ -47,38 +81,6 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
   }, [conversation]);
 
   // Socket listener for realtime file updates
-  useEffect(() => {
-    if (!socket || !conversation) return;
-
-    const handleNewMessage = (data: any) => {
-      // If message contains a file, add it to files list
-      if (data.message && data.conversation_id === conversation._id) {
-        const msg = data.message;
-        if (msg.file_info || msg.type === 'file' || msg.type === 'image') {
-          const newFile: FileAttachment = {
-            _id: msg.file_info?.file_id || msg._id,
-            original_name: msg.file_info?.filename || 'File',
-            stored_name: msg.file_info?.filename || 'file',
-            url: msg.file_info?.url || '#',
-            mime_type: msg.file_info?.mime_type || 'application/octet-stream',
-            size: msg.file_info?.size || 0,
-            uploader_id: msg.sender_id,
-            conversation_id: conversation._id,
-            message_id: msg._id,
-            upload_date: msg.created_at,
-          };
-          setFiles(prev => [newFile, ...prev].slice(0, 10)); // Keep only latest 10 files
-        }
-      }
-    };
-
-    socket.on('message_received', handleNewMessage);
-
-    return () => {
-      socket.off('message_received', handleNewMessage);
-    };
-  }, [socket, conversation]);
-
   useEffect(() => {
     if (!socket || !conversation) return;
 
@@ -414,7 +416,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                 {conversation ? 'No files in this conversation' : 'Select a conversation to see files'}
               </p>
             ) : (
-              files.map((file) => {
+              files.map((file, index) => {
                 const extension = getFileExtension(file.original_name);
                 const getBgColor = () => {
                   if (file.mime_type?.startsWith('image/')) return 'bg-[#F0FFF4]';
@@ -434,8 +436,8 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
 
                 return (
                   <div
-                    key={file._id}
-                    className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                    key={`${file._id}-${file.message_id}-${index}`}
+                    className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     <div className={cn('w-12 h-12 flex items-center justify-center rounded-xl', getBgColor())}>
                       {file.mime_type?.includes('pdf') && (
@@ -465,10 +467,11 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                       onClick={(e) => {
                         e.stopPropagation();
                         if (file.url && file.url !== '#') {
-                          window.open(getFileUrl(file.url), '_blank');
+                          downloadFileFromUrl(file);
                         }
                       }}
-                      className="flex-shrink-0 text-[#615EF0] hover:text-[#615EF0]/80 transition-colors"
+                      className="flex-shrink-0 text-[#615EF0] hover:text-[#615EF0]/80 transition-colors cursor-pointer"
+                      style={{ pointerEvents: (!file.url || file.url === '#') ? 'none' : 'auto', opacity: (!file.url || file.url === '#') ? 0.5 : 1 }}
                     >
                       <Download className="w-5 h-5" strokeWidth={1.5} />
                     </button>
