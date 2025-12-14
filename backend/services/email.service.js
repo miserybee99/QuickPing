@@ -1,15 +1,23 @@
 import nodemailer from 'nodemailer';
-import { Resend } from 'resend';
+import brevo from '@getbrevo/brevo';
 
-// Initialize Resend client if API key is available
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Initialize Brevo client if API key is available
+let brevoClient = null;
+let brevoApi = null;
+
+if (process.env.BREVO_API_KEY) {
+  brevoClient = new brevo.TransactionalEmailsApi();
+  brevoClient.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+  brevoApi = brevo;
+  console.log('📧 Brevo API configured');
+}
 
 // Create transporter based on environment
 const createTransporter = () => {
-  // If Resend is configured, use it instead of SMTP
-  if (resend) {
-    console.log('📧 Using Resend API for email delivery');
-    return null; // We'll use resend directly
+  // If Brevo is configured, use it instead of SMTP
+  if (brevoClient) {
+    console.log('📧 Using Brevo API for email delivery');
+    return null; // We'll use Brevo directly
   }
   
   // Check if we have SMTP credentials configured
@@ -127,24 +135,22 @@ export const sendOTPEmail = async (email, username, otp) => {
     const htmlContent = generateOTPEmailHTML(username, otp);
     const textContent = generateOTPEmailText(username, otp);
 
-    // Use Resend API if configured (best for production)
-    if (resend) {
-      console.log('📧 Sending email via Resend API...');
-      const { data, error } = await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'QuickPing <onboarding@resend.dev>',
-        to: [email],
-        subject: subject,
-        html: htmlContent,
-        text: textContent
-      });
+    // Use Brevo API if configured (best for production)
+    if (brevoClient) {
+      console.log('📧 Sending email via Brevo API...');
+      const sendSmtpEmail = new brevoApi.SendSmtpEmail();
+      sendSmtpEmail.subject = subject;
+      sendSmtpEmail.htmlContent = htmlContent;
+      sendSmtpEmail.textContent = textContent;
+      sendSmtpEmail.sender = { 
+        name: 'QuickPing', 
+        email: process.env.BREVO_FROM_EMAIL || 'quickping@noreply.com' 
+      };
+      sendSmtpEmail.to = [{ email: email, name: username }];
 
-      if (error) {
-        console.error('❌ Resend error:', error);
-        throw new Error('Failed to send email: ' + error.message);
-      }
-
-      console.log('📧 Email sent successfully via Resend:', data.id);
-      return { success: true, messageId: data.id };
+      const result = await brevoClient.sendTransacEmail(sendSmtpEmail);
+      console.log('📧 Email sent successfully via Brevo:', result.body?.messageId || 'sent');
+      return { success: true, messageId: result.body?.messageId || 'brevo-' + Date.now() };
     }
 
     // Use SMTP transporter if configured
@@ -182,8 +188,8 @@ export const sendOTPEmail = async (email, username, otp) => {
  * @returns {Promise<boolean>}
  */
 export const verifyEmailConnection = async () => {
-  if (resend) {
-    console.log('✅ Email service ready (Resend API)');
+  if (brevoClient) {
+    console.log('✅ Email service ready (Brevo API)');
     return true;
   }
   
@@ -296,24 +302,22 @@ export const sendPasswordResetOTPEmail = async (email, username, otp) => {
     const htmlContent = generatePasswordResetOTPEmailHTML(username, otp);
     const textContent = generatePasswordResetOTPEmailText(username, otp);
 
-    // Use Resend API if configured (best for production)
-    if (resend) {
-      console.log('📧 Sending password reset email via Resend API...');
-      const { data, error } = await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'QuickPing <onboarding@resend.dev>',
-        to: [email],
-        subject: subject,
-        html: htmlContent,
-        text: textContent
-      });
+    // Use Brevo API if configured (best for production)
+    if (brevoClient) {
+      console.log('📧 Sending password reset email via Brevo API...');
+      const sendSmtpEmail = new brevoApi.SendSmtpEmail();
+      sendSmtpEmail.subject = subject;
+      sendSmtpEmail.htmlContent = htmlContent;
+      sendSmtpEmail.textContent = textContent;
+      sendSmtpEmail.sender = { 
+        name: 'QuickPing Security', 
+        email: process.env.BREVO_FROM_EMAIL || 'quickping@noreply.com' 
+      };
+      sendSmtpEmail.to = [{ email: email, name: username }];
 
-      if (error) {
-        console.error('❌ Resend error:', error);
-        throw new Error('Failed to send email: ' + error.message);
-      }
-
-      console.log('📧 Password reset email sent successfully via Resend:', data.id);
-      return { success: true, messageId: data.id };
+      const result = await brevoClient.sendTransacEmail(sendSmtpEmail);
+      console.log('📧 Password reset email sent successfully via Brevo:', result.body?.messageId || 'sent');
+      return { success: true, messageId: result.body?.messageId || 'brevo-' + Date.now() };
     }
 
     // Use SMTP transporter if configured
