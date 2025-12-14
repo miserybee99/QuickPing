@@ -27,6 +27,10 @@ const conversationSchema = new mongoose.Schema({
     type: String,
     maxlength: 500
   },
+  avatar_url: {
+    type: String,
+    default: null
+  },
   participants: [participantSchema],
   settings: {
     type: Map,

@@ -6,6 +6,12 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Store io instance (set by server.js)
+let io = null;
+export const setIO = (socketIO) => {
+  io = socketIO;
+};
+
 // Send friend request
 router.post('/request', authenticate, [
   body('friend_id').isMongoId()
@@ -55,6 +61,27 @@ router.post('/request', authenticate, [
       }
     });
     await notification.save();
+    
+    // Emit socket event for realtime updates
+    if (io) {
+      // Emit for friendship status change
+      io.to(`user_${friend_id}`).emit('friendship_status_changed', {
+        user_id: req.user._id.toString(),
+        friend_id: friend_id,
+        status: 'pending',
+        friendship_id: friendship._id
+      });
+      
+      // Emit friend request received notification
+      io.to(`user_${friend_id}`).emit('friend_request_received', {
+        from_user: {
+          _id: req.user._id,
+          username: req.user.username,
+          avatar_url: req.user.avatar_url
+        },
+        friendship_id: friendship._id
+      });
+    }
 
     res.status(201).json({ friendship });
   } catch (error) {
@@ -69,19 +96,40 @@ router.put('/request/:friendshipId', authenticate, [
 ], async (req, res) => {
   try {
     const { status } = req.body;
-    const friendship = await Friendship.findById(req.params.friendshipId);
+    const friendship = await Friendship.findById(req.params.friendshipId)
+      .populate('user_id', 'username avatar_url')
+      .populate('friend_id', 'username avatar_url');
 
     if (!friendship) {
       return res.status(404).json({ error: 'Friend request not found' });
     }
 
-    if (friendship.friend_id.toString() !== req.user._id.toString()) {
+    if (friendship.friend_id._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
     friendship.status = status;
     friendship.responded_at = new Date();
     await friendship.save();
+
+    // Emit socket event for realtime updates
+    if (io) {
+      // Notify the original sender about the response
+      io.to(`user_${friendship.user_id._id}`).emit('friendship_status_changed', {
+        user_id: req.user._id.toString(),
+        friend_id: friendship.user_id._id.toString(),
+        status: status,
+        friendship_id: friendship._id
+      });
+      
+      // Also notify current user (the responder)
+      io.to(`user_${req.user._id}`).emit('friendship_status_changed', {
+        user_id: friendship.user_id._id.toString(),
+        friend_id: req.user._id.toString(),
+        status: status,
+        friendship_id: friendship._id
+      });
+    }
 
     res.json({ friendship });
   } catch (error) {
@@ -159,6 +207,39 @@ router.get('/status/:userId', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Check friendship status error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Remove friend (unfriend)
+router.delete('/:friendId', authenticate, async (req, res) => {
+  try {
+    const { friendId } = req.params;
+    
+    const friendship = await Friendship.findOneAndDelete({
+      $or: [
+        { user_id: req.user._id, friend_id: friendId, status: 'accepted' },
+        { user_id: friendId, friend_id: req.user._id, status: 'accepted' }
+      ]
+    });
+
+    if (!friendship) {
+      return res.status(404).json({ error: 'Friendship not found' });
+    }
+    
+    // Emit socket event for realtime updates
+    if (io) {
+      io.to(`user_${friendId}`).emit('friendship_status_changed', {
+        user_id: req.user._id.toString(),
+        friend_id: friendId,
+        status: 'none',
+        friendship_id: null
+      });
+    }
+
+    res.json({ message: 'Friend removed successfully' });
+  } catch (error) {
+    console.error('Remove friend error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

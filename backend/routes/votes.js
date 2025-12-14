@@ -123,5 +123,52 @@ router.post('/:voteId/vote', authenticate, [
   }
 });
 
+// Delete vote (hard delete)
+router.delete('/:voteId', authenticate, async (req, res) => {
+  try {
+    const vote = await Vote.findById(req.params.voteId);
+
+    if (!vote) {
+      return res.status(404).json({ error: 'Vote not found' });
+    }
+
+    // Verify conversation and participation
+    const conversation = await Conversation.findById(vote.conversation_id);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    // Check if user is the creator OR an admin/moderator of the group
+    const isCreator = vote.created_by.toString() === req.user._id.toString();
+    const participant = conversation.participants.find(
+      p => p.user_id.toString() === req.user._id.toString()
+    );
+    const isAdminOrModerator = participant && ['admin', 'moderator'].includes(participant.role);
+
+    if (!isCreator && !isAdminOrModerator) {
+      return res.status(403).json({ error: 'Only the creator or group admins can delete this vote' });
+    }
+
+    // Hard delete the vote
+    await Vote.findByIdAndDelete(req.params.voteId);
+
+    // Emit socket event to notify all participants
+    const io = req.app.get('io');
+    if (io) {
+      conversation.participants.forEach(p => {
+        io.to(`user_${p.user_id}`).emit('vote_deleted', {
+          vote_id: req.params.voteId,
+          conversation_id: vote.conversation_id.toString()
+        });
+      });
+    }
+
+    res.json({ message: 'Vote deleted successfully' });
+  } catch (error) {
+    console.error('Delete vote error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;
 

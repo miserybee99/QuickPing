@@ -53,6 +53,10 @@ services:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
 
+      # SendGrid Configuration (Preferred for production)
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-}
+
       # OTP Configuration
       - OTP_EXPIRES_MINUTES=${OTP_EXPIRES_MINUTES:-10}
       - OTP_MAX_ATTEMPTS=${OTP_MAX_ATTEMPTS:-5}

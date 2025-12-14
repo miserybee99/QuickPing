@@ -70,7 +70,7 @@ function setCachedSummary(conversationId, summary, lastMessageTime) {
 
 // Build the enhanced prompt for better summarization
 function buildSummarizationPrompt(conversationText, messageCount, participantNames) {
-  return `Bạn là AI assistant chuyên phân tích và tóm tắt cuộc trò chuyện một cách CHI TIẾT và CỤ THỂ.
+  return `Bạn là AI assistant chuyên phân tích và tóm tắt cuộc trò chuyện.
 
 ## THÔNG TIN CUỘC TRÒ CHUYỆN:
 - Số tin nhắn: ${messageCount}
@@ -80,47 +80,19 @@ function buildSummarizationPrompt(conversationText, messageCount, participantNam
 ${conversationText}
 
 ## NHIỆM VỤ:
-Phân tích cuộc trò chuyện trên và tạo tóm tắt CHI TIẾT theo cấu trúc sau:
-
-1. **PHÂN LOẠI CHỦ ĐỀ**: Xác định TẤT CẢ các chủ đề được thảo luận (ví dụ: công việc, dự án, lịch họp, vấn đề kỹ thuật, trò chuyện casual, etc.)
-
-2. **TÓM TẮT THEO CHỦ ĐỀ**: Với MỖI chủ đề, cung cấp:
-   - Tên chủ đề
-   - Nội dung cụ thể được thảo luận
-   - Ai là người tham gia chính trong chủ đề đó
-   - Kết luận/Quyết định (nếu có)
-
-3. **TÓM TẮT TỔNG QUAN**: 2-3 câu mô tả ngắn gọn toàn bộ cuộc trò chuyện
-
-4. **QUYẾT ĐỊNH QUAN TRỌNG**: Liệt kê những quyết định đã được đưa ra (nếu có)
-
-5. **VIỆC CẦN LÀM**: Action items với người được giao (nếu có)
+Viết một bản tóm tắt ngắn gọn, dễ đọc về cuộc trò chuyện trên.
 
 ## YÊU CẦU:
 - Trả lời bằng tiếng Việt
-- Tóm tắt phải CỤ THỂ, không chung chung
-- Nêu rõ AI NÓI GÌ, QUYẾT ĐỊNH GÌ
-- Format output là JSON hợp lệ (không có markdown code blocks)
+- Viết dưới dạng văn bản thông thường (KHÔNG dùng JSON)
+- Tóm tắt ngắn gọn trong 3-5 câu
+- Nêu rõ các chủ đề chính được thảo luận
+- Đề cập đến những quyết định quan trọng (nếu có)
+- Liệt kê việc cần làm (nếu có)
+- Giữ văn phong tự nhiên, dễ hiểu
 
-## OUTPUT FORMAT (JSON):
-{
-  "topics": [
-    {
-      "name": "Tên chủ đề",
-      "summary": "Nội dung chi tiết được thảo luận về chủ đề này...",
-      "participants": ["@user1", "@user2"],
-      "conclusion": "Kết luận hoặc quyết định (nếu có, không thì để null)"
-    }
-  ],
-  "overall_summary": "Tóm tắt tổng quan 2-3 câu về toàn bộ cuộc trò chuyện...",
-  "key_decisions": ["Quyết định 1", "Quyết định 2"],
-  "action_items": [
-    {"assignee": "@username", "task": "Mô tả công việc cần làm"}
-  ]
-}
-
-Nếu không có quyết định hoặc action items, trả về mảng rỗng [].
-Nếu chỉ có 1 chủ đề, vẫn phải trả về trong mảng topics.`;
+## VÍ DỤ OUTPUT:
+Cuộc trò chuyện giữa @user1 và @user2 chủ yếu về việc lên kế hoạch cho dự án ABC. Hai người đã thống nhất deadline là ngày 20/12 và phân công @user1 phụ trách frontend, @user2 phụ trách backend. Cần họp lại vào tuần sau để review tiến độ.`;
 }
 
 // Call Gemini API
@@ -142,8 +114,7 @@ async function callGemini(messages, conversationText) {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 2000,
-        responseMimeType: 'application/json'
+        maxOutputTokens: 1000
       }
     });
 
@@ -154,38 +125,16 @@ async function callGemini(messages, conversationText) {
       throw new Error('No content in Gemini response');
     }
 
-    // Parse JSON response
-    try {
-      // Remove markdown code blocks if present
-      const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const parsed = JSON.parse(cleanContent);
-      
-      // Validate and normalize the response
-      return {
-        topics: Array.isArray(parsed.topics) ? parsed.topics : [],
-        overall_summary: parsed.overall_summary || '',
-        key_decisions: Array.isArray(parsed.key_decisions) ? parsed.key_decisions : [],
-        action_items: Array.isArray(parsed.action_items) ? parsed.action_items : [],
-        // Legacy fields for backward compatibility
-        summary: parsed.overall_summary || '',
-        keyPoints: Array.isArray(parsed.topics) 
-          ? parsed.topics.map(t => `${t.name}: ${t.summary?.substring(0, 100)}...`)
-          : [],
-        actionItems: Array.isArray(parsed.action_items) ? parsed.action_items : []
-      };
-    } catch (parseError) {
-      console.error('Failed to parse Gemini response:', content);
-      // Return raw content as summary if JSON parsing fails
-      return {
-        topics: [],
-        overall_summary: content,
-        key_decisions: [],
-        action_items: [],
-        summary: content,
-        keyPoints: [],
-        actionItems: []
-      };
-    }
+    // Return plain text summary
+    return {
+      topics: [],
+      overall_summary: content.trim(),
+      key_decisions: [],
+      action_items: [],
+      summary: content.trim(),
+      keyPoints: [],
+      actionItems: []
+    };
   } catch (error) {
     console.error('Gemini API call failed:', error);
     throw error;

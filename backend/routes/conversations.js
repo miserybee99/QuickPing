@@ -207,10 +207,11 @@ router.put('/:conversationId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
-    const { name, description, participants } = req.body;
+    const { name, description, avatar_url, participants } = req.body;
 
     if (name) conversation.name = name;
     if (description !== undefined) conversation.description = description;
+    if (avatar_url !== undefined) conversation.avatar_url = avatar_url;
     if (participants) {
       conversation.participants = participants;
     }
@@ -340,6 +341,20 @@ router.put('/:conversationId/participants/:userId/role', authenticate, [
     // Populate and return updated conversation
     await conversation.populate('participants.user_id', 'username avatar_url is_online last_seen role');
     await conversation.populate('created_by', 'username avatar_url');
+
+    // Emit socket event to notify all participants about the role change
+    const io = req.app.get('io');
+    if (io) {
+      // Emit to all participants in the conversation
+      conversation.participants.forEach(p => {
+        io.to(`user_${p.user_id._id}`).emit('conversation_updated', {
+          conversation,
+          type: 'role_change',
+          userId: userId,
+          newRole: role
+        });
+      });
+    }
 
     res.json({ 
       conversation,

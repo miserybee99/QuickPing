@@ -12,7 +12,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import conversationRoutes from './routes/conversations.js';
 import messageRoutes, { setSocketIO as setMessageSocketIO } from './routes/messages.js';
-import friendRoutes from './routes/friends.js';
+import friendRoutes, { setIO as setFriendsSocketIO } from './routes/friends.js';
 import fileRoutes from './routes/files.js';
 import voteRoutes from './routes/votes.js';
 import aiRoutes from './routes/ai.js';
@@ -94,6 +94,7 @@ setupSocketIO(io);
 
 // Pass io instance to routes that need it
 setMessageSocketIO(io);
+setFriendsSocketIO(io);
 
 // Health check
 app.get('/health', (req, res) => {
