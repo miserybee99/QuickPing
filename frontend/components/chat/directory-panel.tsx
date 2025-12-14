@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, FileText, Image, FileSpreadsheet, File, MoreHorizontal, UserPlus, LogOut, Settings } from 'lucide-react';
+import { Download, FileText, Image, FileSpreadsheet, File, MoreHorizontal, UserPlus, LogOut, Settings, Loader2, ChevronDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
@@ -60,7 +60,10 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [files, setFiles] = useState<FileAttachment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
+  const [isMembersExpanded, setIsMembersExpanded] = useState(true);
+  const [isFilesExpanded, setIsFilesExpanded] = useState(true);
   const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'moderator' | 'member'>('member');
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
@@ -319,42 +322,57 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
 
       <div className="flex-1 overflow-y-auto">
         {/* Team Members */}
-        <div className="flex flex-col gap-2 px-4 pt-6">
-          <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col px-4 pt-6">
+          <div
+            onClick={() => setIsMembersExpanded(!isMembersExpanded)}
+            className="flex items-center justify-between mb-2 w-full hover:bg-gray-50 rounded-lg p-2 -mx-2 transition-colors cursor-pointer"
+          >
             <div className="flex items-center gap-2">
               <h3 className="text-[14px] font-semibold leading-[21px]">Team Members</h3>
               <div className="px-2 py-0.5 bg-[#EDF2F7] rounded-[24px]">
                 <span className="text-[12px] font-semibold">{teamMembers.length}</span>
               </div>
             </div>
-            {canAddMembers && (
-              <button
-                onClick={() => setAddMembersOpen(true)}
-                className="w-8 h-8 flex items-center justify-center bg-[#615EF0]/10 hover:bg-[#615EF0]/20 rounded-full transition-colors"
-                title="Add members"
-              >
-                <UserPlus className="w-4 h-4 text-[#615EF0]" />
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {canAddMembers && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAddMembersOpen(true);
+                  }}
+                  className="w-8 h-8 flex items-center justify-center bg-[#615EF0]/10 hover:bg-[#615EF0]/20 rounded-full transition-colors"
+                  title="Add members"
+                >
+                  <UserPlus className="w-4 h-4 text-[#615EF0]" />
+                </button>
+              )}
+              <ChevronDown 
+                className={cn(
+                  "w-5 h-5 text-gray-500 transition-transform duration-200",
+                  !isMembersExpanded && "-rotate-90"
+                )} 
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            {loading ? (
-              <p className="text-sm text-gray-500">Loading...</p>
-            ) : teamMembers.length === 0 ? (
-              <p className="text-sm text-gray-500 p-3">
-                {conversation ? 'No members found' : 'Select a conversation to see members'}
-              </p>
-            ) : (
-              teamMembers.map((member) => {
-                const memberRole = getMemberRole(member._id);
-                const canManage = canManageMember(member._id);
+          {isMembersExpanded && (
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {loading ? (
+                <p className="text-sm text-gray-500">Loading...</p>
+              ) : teamMembers.length === 0 ? (
+                <p className="text-sm text-gray-500 p-3">
+                  {conversation ? 'No members found' : 'Select a conversation to see members'}
+                </p>
+              ) : (
+                teamMembers.map((member) => {
+                  const memberRole = getMemberRole(member._id);
+                  const canManage = canManageMember(member._id);
 
-                return (
-                  <div key={member._id} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors group">
-                    <div className="relative">
-                      <Avatar className="h-12 w-12 rounded-xl flex-shrink-0">
-                        <AvatarImage src={getFileUrl(member.avatar_url)} />
+                  return (
+                    <div key={member._id} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors group">
+                      <div className="relative">
+                        <Avatar className="h-12 w-12 rounded-xl flex-shrink-0">
+                          <AvatarImage src={getFileUrl(member.avatar_url)} />
                         <AvatarFallback className="rounded-xl bg-gray-200">
                           {member.username[0]?.toUpperCase() || 'U'}
                         </AvatarFallback>
@@ -394,22 +412,35 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                 );
               })
             )}
-          </div>
+            </div>
+          )}
         </div>
 
         <div className="h-px bg-black opacity-[0.08] my-6" />
 
         {/* Files */}
-        <div className="flex flex-col gap-2 px-4">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-[14px] font-semibold leading-[21px]">Files</h3>
-            <div className="px-2 py-0.5 bg-[#EDF2F7] rounded-[24px]">
-              <span className="text-[12px] font-semibold">{files.length}</span>
+        <div className="flex flex-col px-4">
+          <button
+            onClick={() => setIsFilesExpanded(!isFilesExpanded)}
+            className="flex items-center justify-between mb-2 w-full hover:bg-gray-50 rounded-lg p-2 -mx-2 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <h3 className="text-[14px] font-semibold leading-[21px]">Files</h3>
+              <div className="px-2 py-0.5 bg-[#EDF2F7] rounded-[24px]">
+                <span className="text-[12px] font-semibold">{files.length}</span>
+              </div>
             </div>
-          </div>
+            <ChevronDown 
+              className={cn(
+                "w-5 h-5 text-gray-500 transition-transform duration-200",
+                !isFilesExpanded && "-rotate-90"
+              )} 
+            />
+          </button>
 
-          <div className="space-y-2">
-            {loading ? (
+          {isFilesExpanded && (
+            <div className="space-y-2 max-h-[350px] overflow-y-auto">
+              {loading ? (
               <p className="text-sm text-gray-500">Loading files...</p>
             ) : files.length === 0 ? (
               <p className="text-sm text-gray-500 p-3">
@@ -464,22 +495,33 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                       </div>
                     </div>
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        if (file.url && file.url !== '#') {
-                          downloadFileFromUrl(file);
+                        if (file.url && file.url !== '#' && !downloadingFileId) {
+                          setDownloadingFileId(file._id);
+                          try {
+                            await downloadFileFromUrl(file);
+                          } finally {
+                            setDownloadingFileId(null);
+                          }
                         }
                       }}
-                      className="flex-shrink-0 text-[#615EF0] hover:text-[#615EF0]/80 transition-colors cursor-pointer"
+                      disabled={downloadingFileId === file._id}
+                      className="flex-shrink-0 text-[#615EF0] hover:text-[#615EF0]/80 transition-colors cursor-pointer disabled:cursor-wait"
                       style={{ pointerEvents: (!file.url || file.url === '#') ? 'none' : 'auto', opacity: (!file.url || file.url === '#') ? 0.5 : 1 }}
                     >
-                      <Download className="w-5 h-5" strokeWidth={1.5} />
+                      {downloadingFileId === file._id ? (
+                        <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />
+                      ) : (
+                        <Download className="w-5 h-5" strokeWidth={1.5} />
+                      )}
                     </button>
                   </div>
                 );
               })
             )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
