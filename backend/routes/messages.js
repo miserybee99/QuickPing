@@ -29,7 +29,11 @@ router.get('/conversation/:conversationId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    let query = { conversation_id: conversationId };
+    // Filter out thread messages - only show main conversation messages
+    let query = { 
+      conversation_id: conversationId,
+      thread_id: { $exists: false } // Exclude messages that are replies in threads
+    };
     if (before) {
       query.created_at = { $lt: new Date(before) };
     }

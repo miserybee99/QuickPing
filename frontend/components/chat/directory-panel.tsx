@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, FileText, Image, FileSpreadsheet, File, MoreHorizontal, UserPlus, LogOut, Settings, Loader2, ChevronDown } from 'lucide-react';
+import { Download, FileText, Image, FileSpreadsheet, File, MoreHorizontal, UserPlus, LogOut, Settings, Loader2, ChevronDown, Calendar } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
 import { apiClient } from '@/lib/api-client';
-import { User, FileAttachment, Conversation } from '@/types';
+import { User, FileAttachment, Conversation, Deadline } from '@/types';
 import { cn } from '@/lib/utils';
 import { getFileUrl } from '@/lib/file-utils';
 import { AddMembersModal } from '@/components/modals/add-members-modal';
@@ -16,12 +16,19 @@ import { useUserStatus } from '@/contexts/UserStatusContext';
 import { useSocket } from '@/contexts/SocketContext';
 import { RoleBadge, RoleIcon } from '@/components/ui/role-badge';
 import { StatusIndicator } from '@/components/ui/status-indicator';
+import {
+  DeadlineCalendar,
+  DeadlineList,
+  CreateDeadlineModal,
+  DeadlineDetailModal,
+  UpcomingDeadlines,
+} from '@/components/deadlines';
 
 // Download file with authentication
 async function downloadFileFromUrl(file: FileAttachment): Promise<void> {
   const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001').replace('/api', '');
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  
+
   if (!file.url || file.url === '#') return;
 
   const downloadUrl = `${baseUrl}/api/files/proxy-download?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.original_name)}`;
@@ -68,6 +75,12 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
+  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+  const [deadlinesLoading, setDeadlinesLoading] = useState(false);
+  const [createDeadlineOpen, setCreateDeadlineOpen] = useState(false);
+  const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
   const { isUserOnline } = useUserStatus();
   const { socket } = useSocket();
 
@@ -76,10 +89,12 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
       fetchTeamMembers();
       fetchFiles();
       checkUserRole();
+      fetchDeadlines();
     } else {
       setTeamMembers([]);
       setFiles([]);
       setCurrentUserRole('member');
+      setDeadlines([]);
     }
   }, [conversation]);
 
@@ -109,11 +124,60 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
       }
     };
 
-    // Handle conversation updates (role changes, etc.)
+    // Handle conversation updates (role changes, participant addition/removal, etc.)
     const handleConversationUpdated = (data: any) => {
+      console.log('📡 Conversation updated in directory panel:', data);
+      
       if (data.conversation && data.conversation._id === conversation._id) {
-        // Update the conversation in parent component
+        // Update the conversation in parent component FIRST
         onConversationUpdated?.(data.conversation);
+        
+        // Extract and update team members directly from the new conversation data
+        const updatedMembers = data.conversation.participants
+          ?.map((p: any) => p.user_id)
+          .filter((user: any): user is User => user !== null && user !== undefined) || [];
+        
+        // Handle participant addition - update team members immediately
+        if (data.type === 'participant_added') {
+          const addedUserIds = data.added_user_ids || [];
+          const currentUserId = typeof window !== 'undefined' && localStorage.getItem('user')
+            ? JSON.parse(localStorage.getItem('user')!)._id
+            : null;
+          
+          // If current user was added to this conversation, join the conversation room
+          if (currentUserId && addedUserIds.includes(currentUserId) && socket) {
+            console.log('👤 Current user was added to conversation, joining room');
+            socket.emit('join_conversation', conversation._id);
+          }
+          
+          console.log('👤 Participant(s) added, updating team members immediately');
+          setTeamMembers(updatedMembers);
+        }
+        
+        // Handle participant removal - update team members immediately
+        if (data.type === 'participant_removed') {
+          const currentUserId = typeof window !== 'undefined' && localStorage.getItem('user')
+            ? JSON.parse(localStorage.getItem('user')!)._id
+            : null;
+          
+          // If current user was removed, they're no longer a participant
+          if (data.removed_user_id === currentUserId) {
+            console.log('⚠️ Current user was removed from group, redirecting...');
+            // Redirect to groups page
+            window.location.href = '/groups';
+            return;
+          }
+          
+          console.log('👤 Participant removed, updating team members immediately');
+          setTeamMembers(updatedMembers);
+        }
+        
+        // Handle role changes - update team members immediately
+        if (data.type === 'role_change') {
+          console.log('👤 Role changed, updating team members immediately');
+          setTeamMembers(updatedMembers);
+        }
+        
         // Re-check user role with updated data
         const currentUserId = typeof window !== 'undefined' && localStorage.getItem('user')
           ? JSON.parse(localStorage.getItem('user')!)._id
@@ -121,6 +185,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
         const participant = data.conversation.participants?.find(
           (p: any) => p.user_id?._id === currentUserId
         );
+        
         setCurrentUserRole(participant?.role || 'member');
       }
     };
@@ -128,11 +193,48 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
     socket.on('message_received', handleNewMessage);
     socket.on('conversation_updated', handleConversationUpdated);
 
+    // Deadline socket listeners
+    const handleDeadlineCreated = (data: { conversation_id: string; deadline: Deadline }) => {
+      if (data.conversation_id === conversation._id) {
+        setDeadlines(prev => [data.deadline, ...prev]);
+      }
+    };
+
+    const handleDeadlineUpdated = (data: { conversation_id: string; deadline: Deadline }) => {
+      if (data.conversation_id === conversation._id) {
+        setDeadlines(prev => prev.map(d =>
+          d._id === data.deadline._id ? data.deadline : d
+        ));
+        // Update selected deadline if it's being viewed
+        if (selectedDeadline?._id === data.deadline._id) {
+          setSelectedDeadline(data.deadline);
+        }
+      }
+    };
+
+    const handleDeadlineDeleted = (data: { deadline_id: string; conversation_id: string }) => {
+      if (data.conversation_id === conversation._id) {
+        setDeadlines(prev => prev.filter(d => d._id !== data.deadline_id));
+        // Close detail modal if deleted deadline was being viewed
+        if (selectedDeadline?._id === data.deadline_id) {
+          setDetailModalOpen(false);
+          setSelectedDeadline(null);
+        }
+      }
+    };
+
+    socket.on('deadline_created', handleDeadlineCreated);
+    socket.on('deadline_updated', handleDeadlineUpdated);
+    socket.on('deadline_deleted', handleDeadlineDeleted);
+
     return () => {
       socket.off('message_received', handleNewMessage);
       socket.off('conversation_updated', handleConversationUpdated);
+      socket.off('deadline_created', handleDeadlineCreated);
+      socket.off('deadline_updated', handleDeadlineUpdated);
+      socket.off('deadline_deleted', handleDeadlineDeleted);
     };
-  }, [socket, conversation, onConversationUpdated]);
+  }, [socket, conversation, onConversationUpdated, selectedDeadline]);
 
   const checkUserRole = () => {
     if (!conversation || conversation.type !== 'group') {
@@ -153,7 +255,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
 
   const fetchTeamMembers = async () => {
     if (!conversation) return;
-    
+
     try {
       // Get team members from conversation participants
       const members = conversation.participants
@@ -180,7 +282,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
       const messagesResponse = await api.get<{ messages: any[] }>(
         `/messages/conversation/${conversation._id}`
       );
-      
+
       // Extract files from messages
       const messageFiles = messagesResponse.data.messages
         ?.filter(msg => msg.file_info || msg.type === 'file' || msg.type === 'image')
@@ -197,13 +299,31 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
           upload_date: msg.created_at,
         }))
         .slice(0, 10) || [];
-      
+
       setFiles(messageFiles);
     } catch (error) {
       console.error('Error fetching files:', error);
       setFiles([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDeadlines = async () => {
+    if (!conversation || conversation.type !== 'group') {
+      setDeadlines([]);
+      return;
+    }
+
+    try {
+      setDeadlinesLoading(true);
+      const response = await apiClient.deadlines.getByConversation(conversation._id);
+      setDeadlines(response.data.deadlines || []);
+    } catch (error) {
+      console.error('Error fetching deadlines:', error);
+      setDeadlines([]);
+    } finally {
+      setDeadlinesLoading(false);
     }
   };
 
@@ -219,19 +339,32 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
   };
 
   const handleMembersAdded = async () => {
-    // Reload conversation data
+    // Reload conversation data immediately to show new members
     if (conversation) {
       try {
-        await api.get(`/conversations/${conversation._id}`);
-        // Update team members with new data
-        fetchTeamMembers();
+        console.log('🔄 Reloading conversation after adding members...');
+        const response = await api.get(`/conversations/${conversation._id}`);
+        const updatedConversation = response.data.conversation;
+        
+        // Update conversation in parent component
+        onConversationUpdated?.(updatedConversation);
+        
+        // Update team members directly from the updated conversation
+        const updatedMembers = updatedConversation.participants
+          ?.map((p: any) => p.user_id)
+          .filter((user: any): user is User => user !== null && user !== undefined) || [];
+        
+        console.log('✅ Updated team members list with', updatedMembers.length, 'members');
+        setTeamMembers(updatedMembers);
       } catch (error) {
         console.error('Error reloading conversation:', error);
+        // Fallback: try to fetch team members from current conversation
+        fetchTeamMembers();
       }
     }
   };
 
-  const canAddMembers = conversation?.type === 'group' && 
+  const canAddMembers = conversation?.type === 'group' &&
     (currentUserRole === 'admin' || currentUserRole === 'moderator');
 
   const getMemberRole = (memberId: string): 'admin' | 'moderator' | 'member' => {
@@ -244,7 +377,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
 
   const handleChangeRole = async (memberId: string, newRole: 'admin' | 'moderator' | 'member') => {
     if (!conversation) return;
-    
+
     try {
       await apiClient.conversations.changeParticipantRole(conversation._id, memberId, newRole);
       // Reload conversation to get updated data
@@ -280,17 +413,17 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
 
   const handleLeaveGroup = async () => {
     if (!conversation) return;
-    
+
     if (!confirm('Are you sure you want to leave this group?')) {
       return;
     }
-    
+
     const currentUserId = typeof window !== 'undefined' && localStorage.getItem('user')
       ? JSON.parse(localStorage.getItem('user')!)._id
       : null;
-    
+
     if (!currentUserId) return;
-    
+
     try {
       await apiClient.conversations.removeParticipant(conversation._id, currentUserId);
       // Redirect to groups page or home
@@ -303,15 +436,31 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
 
   const canManageMember = (memberId: string): boolean => {
     if (!conversation || conversation.type !== 'group') return false;
-    if (currentUserRole !== 'admin') return false; // Only admins can manage members
-    
+    if (currentUserRole !== 'admin') return false; // Only admins can manage members (change roles)
+
     const currentUserId = typeof window !== 'undefined' && localStorage.getItem('user')
       ? JSON.parse(localStorage.getItem('user')!)._id
       : null;
-    
+
     // Cannot manage yourself
     if (memberId === currentUserId) return false;
-    
+
+    return true;
+  };
+
+  // Check if user can open role management modal (admin can change role, moderator can only remove)
+  const canOpenRoleModal = (memberId: string): boolean => {
+    if (!conversation || conversation.type !== 'group') return false;
+    // Admin or moderator can open modal, but only admin can change roles
+    if (!['admin', 'moderator'].includes(currentUserRole)) return false;
+
+    const currentUserId = typeof window !== 'undefined' && localStorage.getItem('user')
+      ? JSON.parse(localStorage.getItem('user')!)._id
+      : null;
+
+    // Cannot manage yourself
+    if (memberId === currentUserId) return false;
+
     return true;
   };
 
@@ -322,7 +471,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
         <div className="flex items-center justify-between px-6 py-6">
           <h2 className="text-[20px] font-semibold">Directory</h2>
           {conversation?.type === 'group' ? (
-            <button 
+            <button
               onClick={() => setSettingsModalOpen(true)}
               className="w-10 h-10 flex items-center justify-center bg-[#EFEFFD] hover:bg-[#615EF0]/20 rounded-full transition-colors"
               title="Group Settings"
@@ -339,6 +488,12 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {/* Show UpcomingDeadlines when no group is selected */}
+        {(!conversation || conversation.type === 'direct') && (
+          <div className="p-4">
+            <UpcomingDeadlines />
+          </div>
+        )}
         {/* Team Members */}
         <div className="flex flex-col px-4 pt-6">
           <div
@@ -364,11 +519,11 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                   <UserPlus className="w-4 h-4 text-[#615EF0]" />
                 </button>
               )}
-              <ChevronDown 
+              <ChevronDown
                 className={cn(
                   "w-5 h-5 text-gray-500 transition-transform duration-200",
                   !isMembersExpanded && "-rotate-90"
-                )} 
+                )}
               />
             </div>
           </div>
@@ -391,48 +546,125 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                       <div className="relative">
                         <Avatar className="h-12 w-12 rounded-xl flex-shrink-0">
                           <AvatarImage src={getFileUrl(member.avatar_url)} />
-                        <AvatarFallback className="rounded-xl bg-gray-200">
-                          {member.username[0]?.toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <StatusIndicator 
-                        isOnline={isUserOnline(member._id)} 
-                        size="md"
-                        showOffline={false}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-[14px] font-semibold leading-[21px] truncate">{member.username}</p>
-                        <RoleIcon role={memberRole} size="sm" />
+                          <AvatarFallback className="rounded-xl bg-gray-200">
+                            {member.username[0]?.toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <StatusIndicator
+                          isOnline={isUserOnline(member._id)}
+                          size="md"
+                          showOffline={false}
+                        />
                       </div>
-                      <div className="flex items-center gap-2">
-                        {conversation?.type === 'group' && (
-                          <RoleBadge role={memberRole} size="sm" showIcon={false} />
-                        )}
-                        {member.mssv && (
-                          <span className="text-[11px] text-gray-500">• {member.mssv}</span>
-                        )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-[14px] font-semibold leading-[21px] truncate">{member.username}</p>
+                          <RoleIcon role={memberRole} size="sm" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {conversation?.type === 'group' && (
+                            <RoleBadge role={memberRole} size="sm" showIcon={false} />
+                          )}
+                          {member.mssv && (
+                            <span className="text-[11px] text-gray-500">• {member.mssv}</span>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Role management - open modal */}
+                      {canOpenRoleModal(member._id) && conversation?.type === 'group' && (
+                        <button
+                          onClick={() => openRoleModal(member)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-[#615EF0]/10 rounded-lg"
+                          title={currentUserRole === 'admin' ? 'Manage Role' : 'Remove Member'}
+                        >
+                          <MoreHorizontal className="w-4 h-4 text-[#615EF0]" />
+                        </button>
+                      )}
                     </div>
-                    
-                    {/* Role management - open modal */}
-                    {canManage && conversation?.type === 'group' && (
-                      <button 
-                        onClick={() => openRoleModal(member)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-[#615EF0]/10 rounded-lg"
-                        title="Manage Role"
-                      >
-                        <MoreHorizontal className="w-4 h-4 text-[#615EF0]" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
             </div>
           )}
         </div>
+
+        {/* Calendar - Only show for group chats */}
+        {conversation?.type === 'group' && (
+          <>
+            <div className="h-px bg-black opacity-[0.08] my-6" />
+
+            <div className="flex flex-col px-4">
+              <button
+                onClick={() => setIsCalendarExpanded(!isCalendarExpanded)}
+                className="flex items-center justify-between mb-2 w-full hover:bg-gray-50 rounded-lg p-2 -mx-2 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#615EF0]" />
+                  <h3 className="text-[14px] font-semibold leading-[21px]">Deadlines</h3>
+                  <div className="px-2 py-0.5 bg-[#EDF2F7] rounded-[24px]">
+                    <span className="text-[12px] font-semibold">
+                      {deadlines.length}
+                    </span>
+                  </div>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    "w-5 h-5 text-gray-500 transition-transform duration-200",
+                    !isCalendarExpanded && "-rotate-90"
+                  )}
+                />
+              </button>
+
+              {isCalendarExpanded && (
+                <div className="space-y-4">
+                  {deadlinesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-[#615EF0]" />
+                    </div>
+                  ) : (
+                    <>
+                      <DeadlineCalendar
+                        deadlines={deadlines}
+                        isAdmin={currentUserRole === 'admin'}
+                        onCreateClick={() => setCreateDeadlineOpen(true)}
+                        onDeadlineClick={(deadline) => {
+                          setSelectedDeadline(deadline);
+                          setDetailModalOpen(true);
+                        }}
+                        onDateClick={(_date, dayDeadlines) => {
+                          if (dayDeadlines.length === 1) {
+                            setSelectedDeadline(dayDeadlines[0]);
+                            setDetailModalOpen(true);
+                          }
+                        }}
+                      />
+
+                      {/* Deadline list below calendar */}
+                      <DeadlineList
+                        deadlines={deadlines}
+                        isAdmin={currentUserRole === 'admin'}
+                        loading={deadlinesLoading}
+                        onDeadlineClick={(deadline) => {
+                          setSelectedDeadline(deadline);
+                          setDetailModalOpen(true);
+                        }}
+                        onEdit={(deadline) => {
+                          setSelectedDeadline(deadline);
+                          setDetailModalOpen(true);
+                        }}
+                        onDelete={(deadline) => {
+                          setSelectedDeadline(deadline);
+                          setDetailModalOpen(true);
+                        }}
+                      />
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         <div className="h-px bg-black opacity-[0.08] my-6" />
 
@@ -448,96 +680,96 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                 <span className="text-[12px] font-semibold">{files.length}</span>
               </div>
             </div>
-            <ChevronDown 
+            <ChevronDown
               className={cn(
                 "w-5 h-5 text-gray-500 transition-transform duration-200",
                 !isFilesExpanded && "-rotate-90"
-              )} 
+              )}
             />
           </button>
 
           {isFilesExpanded && (
             <div className="space-y-2 max-h-[350px] overflow-y-auto">
               {loading ? (
-              <p className="text-sm text-gray-500">Loading files...</p>
-            ) : files.length === 0 ? (
-              <p className="text-sm text-gray-500 p-3">
-                {conversation ? 'No files in this conversation' : 'Select a conversation to see files'}
-              </p>
-            ) : (
-              files.map((file, index) => {
-                const extension = getFileExtension(file.original_name);
-                const getBgColor = () => {
-                  if (file.mime_type?.startsWith('image/')) return 'bg-[#F0FFF4]';
-                  if (file.mime_type?.includes('pdf')) return 'bg-[#FFF5F5]';
-                  if (file.mime_type?.includes('word') || file.mime_type?.includes('document')) return 'bg-[#EBF8FF]';
-                  if (file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) return 'bg-[#FAF5FF]';
-                  return 'bg-gray-100';
-                };
-                
-                const getIconColor = () => {
-                  if (file.mime_type?.startsWith('image/')) return 'text-[#48BB78]';
-                  if (file.mime_type?.includes('pdf')) return 'text-[#F56565]';
-                  if (file.mime_type?.includes('word') || file.mime_type?.includes('document')) return 'text-[#4299E1]';
-                  if (file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) return 'text-[#9F7AEA]';
-                  return 'text-gray-600';
-                };
+                <p className="text-sm text-gray-500">Loading files...</p>
+              ) : files.length === 0 ? (
+                <p className="text-sm text-gray-500 p-3">
+                  {conversation ? 'No files in this conversation' : 'Select a conversation to see files'}
+                </p>
+              ) : (
+                files.map((file, index) => {
+                  const extension = getFileExtension(file.original_name);
+                  const getBgColor = () => {
+                    if (file.mime_type?.startsWith('image/')) return 'bg-[#F0FFF4]';
+                    if (file.mime_type?.includes('pdf')) return 'bg-[#FFF5F5]';
+                    if (file.mime_type?.includes('word') || file.mime_type?.includes('document')) return 'bg-[#EBF8FF]';
+                    if (file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) return 'bg-[#FAF5FF]';
+                    return 'bg-gray-100';
+                  };
 
-                return (
-                  <div
-                    key={`${file._id}-${file.message_id}-${index}`}
-                    className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <div className={cn('w-12 h-12 flex items-center justify-center rounded-xl', getBgColor())}>
-                      {file.mime_type?.includes('pdf') && (
-                        <FileText className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
-                      )}
-                      {file.mime_type?.startsWith('image/') && (
-                        <Image className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
-                      )}
-                      {(file.mime_type?.includes('word') || file.mime_type?.includes('document')) && (
-                        <FileText className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
-                      )}
-                      {(file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) && (
-                        <FileSpreadsheet className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
-                      )}
-                      {!['pdf', 'image', 'word', 'document', 'spreadsheet', 'excel'].some(t => file.mime_type?.includes(t)) && (
-                        <File className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-semibold leading-[21px] truncate">{file.original_name}</p>
-                      <div className="flex gap-2.5">
-                        <span className="text-[12px] font-semibold text-gray-900 opacity-40">{extension}</span>
-                        <span className="text-[12px] font-semibold text-gray-900 opacity-40">{formatFileSize(file.size)}</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (file.url && file.url !== '#' && !downloadingFileId) {
-                          setDownloadingFileId(file._id);
-                          try {
-                            await downloadFileFromUrl(file);
-                          } finally {
-                            setDownloadingFileId(null);
-                          }
-                        }
-                      }}
-                      disabled={downloadingFileId === file._id}
-                      className="flex-shrink-0 text-[#615EF0] hover:text-[#615EF0]/80 transition-colors cursor-pointer disabled:cursor-wait"
-                      style={{ pointerEvents: (!file.url || file.url === '#') ? 'none' : 'auto', opacity: (!file.url || file.url === '#') ? 0.5 : 1 }}
+                  const getIconColor = () => {
+                    if (file.mime_type?.startsWith('image/')) return 'text-[#48BB78]';
+                    if (file.mime_type?.includes('pdf')) return 'text-[#F56565]';
+                    if (file.mime_type?.includes('word') || file.mime_type?.includes('document')) return 'text-[#4299E1]';
+                    if (file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) return 'text-[#9F7AEA]';
+                    return 'text-gray-600';
+                  };
+
+                  return (
+                    <div
+                      key={`${file._id}-${file.message_id}-${index}`}
+                      className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors"
                     >
-                      {downloadingFileId === file._id ? (
-                        <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />
-                      ) : (
-                        <Download className="w-5 h-5" strokeWidth={1.5} />
-                      )}
-                    </button>
-                  </div>
-                );
-              })
-            )}
+                      <div className={cn('w-12 h-12 flex items-center justify-center rounded-xl', getBgColor())}>
+                        {file.mime_type?.includes('pdf') && (
+                          <FileText className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
+                        )}
+                        {file.mime_type?.startsWith('image/') && (
+                          <Image className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
+                        )}
+                        {(file.mime_type?.includes('word') || file.mime_type?.includes('document')) && (
+                          <FileText className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
+                        )}
+                        {(file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) && (
+                          <FileSpreadsheet className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
+                        )}
+                        {!['pdf', 'image', 'word', 'document', 'spreadsheet', 'excel'].some(t => file.mime_type?.includes(t)) && (
+                          <File className={cn('h-6 w-6', getIconColor())} strokeWidth={1.5} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-semibold leading-[21px] truncate">{file.original_name}</p>
+                        <div className="flex gap-2.5">
+                          <span className="text-[12px] font-semibold text-gray-900 opacity-40">{extension}</span>
+                          <span className="text-[12px] font-semibold text-gray-900 opacity-40">{formatFileSize(file.size)}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (file.url && file.url !== '#' && !downloadingFileId) {
+                            setDownloadingFileId(file._id);
+                            try {
+                              await downloadFileFromUrl(file);
+                            } finally {
+                              setDownloadingFileId(null);
+                            }
+                          }
+                        }}
+                        disabled={downloadingFileId === file._id}
+                        className="flex-shrink-0 text-[#615EF0] hover:text-[#615EF0]/80 transition-colors cursor-pointer disabled:cursor-wait"
+                        style={{ pointerEvents: (!file.url || file.url === '#') ? 'none' : 'auto', opacity: (!file.url || file.url === '#') ? 0.5 : 1 }}
+                      >
+                        {downloadingFileId === file._id ? (
+                          <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />
+                        ) : (
+                          <Download className="w-5 h-5" strokeWidth={1.5} />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
             </div>
           )}
         </div>
@@ -611,6 +843,26 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
           }}
         />
       )}
+
+      {/* Create Deadline Modal */}
+      {conversation && conversation.type === 'group' && (
+        <CreateDeadlineModal
+          open={createDeadlineOpen}
+          onOpenChange={setCreateDeadlineOpen}
+          conversationId={conversation._id}
+          onSuccess={fetchDeadlines}
+        />
+      )}
+
+      {/* Deadline Detail Modal */}
+      <DeadlineDetailModal
+        open={detailModalOpen}
+        onOpenChange={setDetailModalOpen}
+        deadline={selectedDeadline}
+        isAdmin={currentUserRole === 'admin'}
+        onUpdate={fetchDeadlines}
+        onDelete={fetchDeadlines}
+      />
     </div>
   );
 }

@@ -121,6 +121,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Create a users map for reactions display
   const usersMap = useMemo(() => {
@@ -224,6 +225,21 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       const currentConvId = conversationId?.toString();
       
       if (messageConversationId === currentConvId) {
+        // Filter out thread messages - they should only appear in thread panel, not main chat
+        if (data.message.thread_id) {
+          console.log('⚠️ Thread message ignored in main chat:', data.message._id, 'thread_id:', data.message.thread_id);
+          // Update thread reply count but don't add to main messages
+          if (data.message.thread_id) {
+            setThreadReplyCounts(prev => {
+              const newMap = new Map(prev);
+              const currentCount = newMap.get(data.message.thread_id?.toString() || '') || 0;
+              newMap.set(data.message.thread_id.toString(), currentCount + 1);
+              return newMap;
+            });
+          }
+          return;
+        }
+        
         const messageId = data.message._id?.toString();
         
         // Use ref to track message IDs to prevent duplicates across re-renders
@@ -234,6 +250,23 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
         
         messageIdsRef.current.add(messageId);
         
+        // Check if input field is focused BEFORE adding message to state
+        // Only mark messages from other users, not own messages
+        const senderId = data.message.sender_id?._id?.toString() || data.message.sender_id?.toString();
+        const currentUserId = currentUser?._id?.toString();
+        const isFromOtherUser = senderId && currentUserId && senderId !== currentUserId;
+        
+        // Check if input is focused (either directly or if it's in the active element's form)
+        const isInputFocused = inputRef.current && (
+          document.activeElement === inputRef.current ||
+          (document.activeElement instanceof HTMLElement && 
+           document.activeElement.closest('form')?.contains(inputRef.current))
+        );
+        
+        // If input is focused and message is from other user, mark it as read immediately
+        const shouldMarkAsRead = isFromOtherUser && isInputFocused;
+        
+        // Add message to state with read_by already set if needed
         setMessages((prev) => {
           // Double check in state
           const exists = prev.some(m => m._id?.toString() === messageId);
@@ -245,8 +278,17 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
           
           console.log('✅ Adding new message to state:', messageId);
           
+          // Create message object with read_by if input is focused
+          const messageToAdd = shouldMarkAsRead && currentUserId ? {
+            ...data.message,
+            read_by: [
+              ...(data.message.read_by || []),
+              { user_id: currentUserId, read_at: new Date() }
+            ]
+          } : data.message;
+          
           // Sort messages by created_at to ensure correct order
-          const newMessages = [...prev, data.message].sort((a, b) => {
+          const newMessages = [...prev, messageToAdd].sort((a, b) => {
             const dateA = new Date(a.created_at || 0).getTime();
             const dateB = new Date(b.created_at || 0).getTime();
             return dateA - dateB;
@@ -254,6 +296,94 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
           
           return newMessages;
         });
+        
+        // Mark as read with API call if input is focused
+        if (shouldMarkAsRead) {
+          console.log('👁️ Input is focused, marking new message as read:', messageId);
+          
+          // Mark as read with API call (with a small delay to ensure message is in state)
+          setTimeout(() => {
+            if (markAsReadTimeoutRef.current) {
+              clearTimeout(markAsReadTimeoutRef.current);
+            }
+            markAsReadTimeoutRef.current = setTimeout(() => {
+              // Mark just this new message as read via API
+              apiClient.messages.markAsRead(messageId).then((response: any) => {
+                console.log('📥 API Response full:', response);
+                const updatedMessage = response?.data?.message || response?.message;
+                console.log('✅ New message marked as read (input focused):', messageId, 'Updated message:', updatedMessage);
+                
+                // Update state with response from server (to ensure consistency)
+                if (updatedMessage && updatedMessage.read_by) {
+                  setMessages((prev) => {
+                    return prev.map((msg) => {
+                      if (msg._id?.toString() === messageId) {
+                        return {
+                          ...msg,
+                          read_by: updatedMessage.read_by
+                        };
+                      }
+                      return msg;
+                    });
+                  });
+                } else {
+                  // If response doesn't have read_by, just ensure current user is in read_by
+                  setMessages((prev) => {
+                    return prev.map((msg) => {
+                      if (msg._id?.toString() === messageId) {
+                        const alreadyRead = msg.read_by?.some(
+                          (r) => {
+                            const readUserId = typeof r.user_id === 'string' ? r.user_id : r.user_id?._id?.toString();
+                            return readUserId === currentUserId;
+                          }
+                        );
+                        
+                        if (!alreadyRead && currentUserId) {
+                          return {
+                            ...msg,
+                            read_by: [
+                              ...(msg.read_by || []),
+                              { user_id: currentUserId, read_at: new Date() }
+                            ]
+                          };
+                        }
+                      }
+                      return msg;
+                    });
+                  });
+                }
+                
+                // Emit socket event for read receipt
+                if (socket && conversationId && currentUserId) {
+                  socket.emit('messages_read', {
+                    conversation_id: conversationId,
+                    message_ids: [messageId],
+                    user_id: currentUserId
+                  });
+                }
+              }).catch((err: any) => {
+                console.error('Error marking new message as read:', err);
+                // Remove read_by if API call fails
+                setMessages((prev) => {
+                  return prev.map((msg) => {
+                    if (msg._id?.toString() === messageId) {
+                      return {
+                        ...msg,
+                        read_by: (msg.read_by || []).filter(
+                          (r) => {
+                            const readUserId = typeof r.user_id === 'string' ? r.user_id : r.user_id?._id?.toString();
+                            return readUserId !== currentUserId;
+                          }
+                        )
+                      };
+                    }
+                    return msg;
+                  });
+                });
+              });
+            }, 200); // Small delay to ensure message is processed
+          }, 100);
+        }
       } else {
         console.log('⚠️ Message for different conversation, ignoring');
       }
@@ -283,38 +413,36 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       console.log('📡 User status changed:', data);
       
       // Update conversation if the status change is for a participant
-      if (conversation) {
-        setConversation((prev) => {
-          if (!prev) return prev;
-          
-          // Check if the user is a participant in this conversation
-          const isParticipant = prev.participants?.some(
-            p => p.user_id?._id?.toString() === data.user_id
-          );
-          
-          if (isParticipant) {
-            // Update the participant's status
-            return {
-              ...prev,
-              participants: prev.participants?.map(p => {
-                if (p.user_id?._id?.toString() === data.user_id) {
-                  return {
-                    ...p,
-                    user_id: {
-                      ...p.user_id,
-                      is_online: data.is_online,
-                      last_seen: data.last_seen
-                    }
-                  };
-                }
-                return p;
-              })
-            };
-          }
-          
-          return prev;
-        });
-      }
+      setConversation((prev) => {
+        if (!prev) return prev;
+        
+        // Check if the user is a participant in this conversation
+        const isParticipant = prev.participants?.some(
+          p => p.user_id?._id?.toString() === data.user_id
+        );
+        
+        if (isParticipant) {
+          // Update the participant's status
+          return {
+            ...prev,
+            participants: prev.participants?.map(p => {
+              if (p.user_id?._id?.toString() === data.user_id) {
+                return {
+                  ...p,
+                  user_id: {
+                    ...p.user_id,
+                    is_online: data.is_online,
+                    last_seen: data.last_seen
+                  }
+                };
+              }
+              return p;
+            })
+          };
+        }
+        
+        return prev;
+      });
     };
     
     // Listen for bulk read receipts
@@ -437,11 +565,19 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       
       if (data.conversation_id === conversationId) {
         if (data.action === 'pin') {
-          // Find the message and add it to pinned
-          const pinnedMessage = messages.find(m => m._id === data.message_id);
-          if (pinnedMessage && !pinnedMessages.some(p => p._id === data.message_id)) {
-            setPinnedMessages(prev => [...prev, pinnedMessage]);
-          }
+          // Find the message and add it to pinned using functional setState
+          setMessages(currentMessages => {
+            const pinnedMessage = currentMessages.find(m => m._id === data.message_id);
+            if (pinnedMessage) {
+              setPinnedMessages(prevPinned => {
+                if (!prevPinned.some(p => p._id === data.message_id)) {
+                  return [...prevPinned, pinnedMessage];
+                }
+                return prevPinned;
+              });
+            }
+            return currentMessages;
+          });
         } else {
           // Remove from pinned
           setPinnedMessages(prev => prev.filter(p => p._id !== data.message_id));
@@ -499,6 +635,54 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       }
     };
 
+    // Listen for conversation updates (participant removal, role changes, etc.)
+    const handleConversationUpdated = (data: any) => {
+      console.log('📡 Conversation updated in chat panel:', data);
+      
+      if (data.conversation && data.conversation._id?.toString() === conversationId) {
+        const currentUserId = currentUser?._id?.toString();
+        
+        // Handle participant addition
+        if (data.type === 'participant_added') {
+          const addedUserIds = data.added_user_ids || [];
+          const currentUserId = currentUser?._id?.toString();
+          
+          // If current user was added to this conversation, join the conversation room
+          if (currentUserId && addedUserIds.includes(currentUserId)) {
+            console.log('👤 Current user was added to conversation, joining room');
+            socket.emit('join_conversation', conversationId);
+          }
+          
+          // Update conversation with new participants
+          console.log('👤 Participant(s) added, updating conversation');
+          setConversation(data.conversation);
+          onConversationLoaded?.(data.conversation);
+        }
+        
+        // Handle participant removal
+        if (data.type === 'participant_removed') {
+          // If current user was removed, redirect to groups page
+          if (data.removed_user_id === currentUserId) {
+            console.log('⚠️ Current user was removed from group, redirecting...');
+            window.location.href = '/groups';
+            return;
+          }
+          
+          // Update conversation with new participants
+          console.log('👤 Participant removed, updating conversation');
+          setConversation(data.conversation);
+          onConversationLoaded?.(data.conversation);
+        }
+        
+        // Handle role changes
+        if (data.type === 'role_change') {
+          console.log('👤 Role changed, updating conversation');
+          setConversation(data.conversation);
+          onConversationLoaded?.(data.conversation);
+        }
+      }
+    };
+
     socket.on('joined_conversation', handleJoinedConversation);
     socket.on('message_received', handleMessageReceived);
     socket.on('user_typing', handleUserTyping);
@@ -512,6 +696,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
     socket.on('thread_updated', handleThreadUpdated);
     socket.on('vote_updated', handleVoteUpdated);
     socket.on('new_vote', handleNewVote);
+    socket.on('conversation_updated', handleConversationUpdated);
     
     // Listen for vote deletion
     const handleVoteDeleted = (data: { vote_id: string; conversation_id: string }) => {
@@ -555,15 +740,27 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       socket.off('thread_updated', handleThreadUpdated);
       socket.off('vote_updated', handleVoteUpdated);
       socket.off('new_vote', handleNewVote);
+      socket.off('conversation_updated', handleConversationUpdated);
       socket.off('vote_deleted', handleVoteDeleted);
       socket.off('friendship_status_changed', handleFriendshipStatusChanged);
-      socket.emit('leave_conversation', conversationId);
+      
+      // IMPORTANT: DO NOT leave conversation room here!
+      // The messages-panel component needs to stay in ALL conversation rooms
+      // to receive real-time updates for all conversations, even when not viewing them.
+      // Leaving the room here causes messages to stop appearing in real-time in the messages panel.
+      // socket.emit('leave_conversation', conversationId); // REMOVED
       
       // Clear typing indicators
       setTypingUsers(new Set());
       setIsTyping(false);
+      
+      // Clear mark as read timeout
+      if (markAsReadTimeoutRef.current) {
+        clearTimeout(markAsReadTimeoutRef.current);
+        markAsReadTimeoutRef.current = null;
+      }
     };
-  }, [socket, conversationId, currentUser?._id, conversation, messages, pinnedMessages]);
+  }, [socket, conversationId, currentUser?._id, conversation]);
 
   useEffect(() => {
     scrollToBottom();
@@ -615,8 +812,28 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       const response = await api.get<{ messages: Message[] }>(`/messages/conversation/${conversationId}`);
       const fetchedMessages = response.data.messages || [];
       
-      // Remove duplicates by ID before setting state
+      // Calculate thread reply counts from ALL messages (including thread messages) BEFORE filtering
+      // This ensures accurate thread counts even though thread messages are excluded from main chat
+      const threadCounts = new Map<string, number>();
+      fetchedMessages.forEach(msg => {
+        if (msg.thread_id) {
+          const threadId = msg.thread_id?.toString() || (msg.thread_id as any)?._id?.toString();
+          if (threadId) {
+            const count = threadCounts.get(threadId) || 0;
+            threadCounts.set(threadId, count + 1);
+          }
+        }
+      });
+      setThreadReplyCounts(threadCounts);
+      
+      // Filter out thread messages - they should only appear in thread panel, not main chat
+      // Also remove duplicates by ID before setting state
       const uniqueMessages = fetchedMessages.filter((msg, index, self) => {
+        // Exclude thread messages
+        if (msg.thread_id) {
+          return false;
+        }
+        
         const msgId = msg._id?.toString();
         if (!msgId) return true; // Keep messages without ID
         return index === self.findIndex(m => m._id?.toString() === msgId);
@@ -630,16 +847,6 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       });
       
       setMessages(uniqueMessages);
-      
-      // Calculate thread reply counts from messages with thread_id
-      const threadCounts = new Map<string, number>();
-      uniqueMessages.forEach(msg => {
-        if (msg.thread_id) {
-          const count = threadCounts.get(msg.thread_id) || 0;
-          threadCounts.set(msg.thread_id, count + 1);
-        }
-      });
-      setThreadReplyCounts(threadCounts);
     } catch (error: any) {
       console.error('Error fetching messages:', error);
       
@@ -1440,54 +1647,56 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
     return () => clearTimeout(timer);
   }, [messages.length]);
 
-  // Auto mark messages as read when viewing conversation
-  useEffect(() => {
+  // Function to mark messages as read - can be called from multiple places
+  const markMessagesAsRead = useCallback(async () => {
     if (!conversationId || !messages.length || !currentUser || !conversation) return;
 
-    // Mark all unread messages from other users as read
-    const markMessagesAsRead = async () => {
-      const currentUserId = currentUser._id?.toString();
-      if (!currentUserId) return;
+    const currentUserId = currentUser._id?.toString();
+    if (!currentUserId) return;
 
-      const unreadMessages = messages.filter((msg) => {
-        // Only mark messages from others, not own messages
-        const senderId = msg.sender_id?._id?.toString() || msg.sender_id?.toString();
-        if (senderId === currentUserId) return false;
+    const unreadMessages = messages.filter((msg) => {
+      // Only mark messages from others, not own messages
+      const senderId = msg.sender_id?._id?.toString() || msg.sender_id?.toString();
+      if (senderId === currentUserId) return false;
 
-        // Check if already read by current user
-        const isRead = msg.read_by?.some(
-          (r) => {
-            const readUserId = typeof r.user_id === 'string' ? r.user_id : r.user_id?._id?.toString();
-            return readUserId === currentUserId;
-          }
-        );
-        return !isRead;
+      // Check if already read by current user
+      const isRead = msg.read_by?.some(
+        (r) => {
+          const readUserId = typeof r.user_id === 'string' ? r.user_id : r.user_id?._id?.toString();
+          return readUserId === currentUserId;
+        }
+      );
+      return !isRead;
+    });
+
+    // Mark each unread message as read
+    if (unreadMessages.length > 0) {
+      console.log(`📖 Marking ${unreadMessages.length} messages as read`);
+      
+      const markPromises = unreadMessages.map((msg) =>
+        apiClient.messages.markAsRead(msg._id).catch((err: any) => {
+          console.error('Error marking message as read:', err);
+        })
+      );
+
+      // Batch mark as read
+      Promise.all(markPromises).then(() => {
+        console.log('✅ Messages marked as read');
+        // Emit socket event for read receipt
+        if (socket && conversationId) {
+          socket.emit('messages_read', {
+            conversation_id: conversationId,
+            message_ids: unreadMessages.map(m => m._id),
+            user_id: currentUserId
+          });
+        }
       });
+    }
+  }, [conversationId, messages, currentUser, conversation, socket]);
 
-      // Mark each unread message as read
-      if (unreadMessages.length > 0) {
-        console.log(`📖 Marking ${unreadMessages.length} messages as read`);
-        
-        const markPromises = unreadMessages.map((msg) =>
-          apiClient.messages.markAsRead(msg._id).catch((err: any) => {
-            console.error('Error marking message as read:', err);
-          })
-        );
-
-        // Batch mark as read
-        Promise.all(markPromises).then(() => {
-          console.log('✅ Messages marked as read');
-          // Emit socket event for read receipt
-          if (socket && conversationId) {
-            socket.emit('messages_read', {
-              conversation_id: conversationId,
-              message_ids: unreadMessages.map(m => m._id),
-              user_id: currentUserId
-            });
-          }
-        });
-      }
-    };
+  // Auto mark messages as read when viewing conversation (after load)
+  useEffect(() => {
+    if (!conversationId || !messages.length || !currentUser || !conversation) return;
 
     // Debounce mark as read to avoid too many API calls
     const timer = setTimeout(() => {
@@ -1495,7 +1704,37 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
     }, 1000); // Wait 1 second after conversation/messages load
 
     return () => clearTimeout(timer);
-  }, [conversationId, messages, currentUser, conversation]);
+  }, [conversationId, messages.length, currentUser, conversation, markMessagesAsRead]);
+
+  // Auto-focus input when conversation changes and is loaded
+  useEffect(() => {
+    if (!conversationId || !conversation || loading) return;
+
+    // Use requestAnimationFrame + setTimeout to ensure DOM is fully rendered
+    const focusInput = () => {
+      // Try multiple times with increasing delays to ensure input is ready
+      const attempts = [100, 300, 500];
+      
+      attempts.forEach((delay, index) => {
+        setTimeout(() => {
+          if (inputRef.current) {
+            // Check if input is in the DOM and not disabled
+            if (inputRef.current.offsetParent !== null && !inputRef.current.disabled) {
+              inputRef.current.focus();
+              console.log(`✅ Auto-focused input for conversation: ${conversationId} (attempt ${index + 1})`);
+            } else if (index === attempts.length - 1) {
+              console.warn('⚠️ Could not auto-focus input - element not ready');
+            }
+          }
+        }, delay);
+      });
+    };
+
+    // Use requestAnimationFrame to wait for next paint
+    requestAnimationFrame(() => {
+      focusInput();
+    });
+  }, [conversationId, conversation, loading]);
 
   const getConversationName = (): string => {
     if (!conversation) return 'Unknown';
@@ -2104,6 +2343,26 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
             onChange={(e) => {
               setMessage(e.target.value);
               handleTyping();
+            }}
+            onFocus={() => {
+              // Mark messages as read when user clicks on input
+              // Debounce to avoid multiple calls
+              if (markAsReadTimeoutRef.current) {
+                clearTimeout(markAsReadTimeoutRef.current);
+              }
+              markAsReadTimeoutRef.current = setTimeout(() => {
+                markMessagesAsRead();
+              }, 300); // 300ms debounce
+            }}
+            onClick={() => {
+              // Also mark as read on click (in case focus doesn't fire)
+              // Debounce to avoid multiple calls
+              if (markAsReadTimeoutRef.current) {
+                clearTimeout(markAsReadTimeoutRef.current);
+              }
+              markAsReadTimeoutRef.current = setTimeout(() => {
+                markMessagesAsRead();
+              }, 300); // 300ms debounce
             }}
             className="flex-1 bg-transparent border-none outline-none text-[14px] leading-[21px] text-gray-900 placeholder:text-gray-900 placeholder:opacity-40"
             disabled={sending}

@@ -40,7 +40,7 @@ export default function ForgotPasswordPage() {
     } catch (err: any) {
       console.error('❌ Forgot password error:', err.response?.data || err.message);
       const errorData = err.response?.data;
-      const errorMessage = errorData?.error || errorData?.message || 'Không thể gửi mã xác thực. Vui lòng thử lại.';
+      const errorMessage = errorData?.error || errorData?.message || 'Unable to send verification code. Please try again.';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -69,9 +69,9 @@ export default function ForgotPasswordPage() {
                 </div>
               </motion.div>
               <div className="space-y-2">
-                <CardTitle className="text-3xl font-bold">Quên mật khẩu?</CardTitle>
+                <CardTitle className="text-3xl font-bold">Forgot Password?</CardTitle>
                 <CardDescription className="text-base">
-                  Nhập email của bạn để nhận mã xác thực
+                  Enter your email to receive verification code
                 </CardDescription>
               </div>
             </CardHeader>
@@ -97,7 +97,7 @@ export default function ForgotPasswordPage() {
                   <Alert className="bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
                     <CheckCircle2 className="h-4 w-4" />
                     <AlertDescription>
-                      Mã xác thực đã được gửi đến email của bạn! Đang chuyển hướng...
+                      Verification code has been sent to your email! Redirecting...
                     </AlertDescription>
                   </Alert>
                 </motion.div>
@@ -132,15 +132,15 @@ export default function ForgotPasswordPage() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Đang gửi...
+                      Sending...
                     </>
                   ) : success ? (
                     <>
                       <CheckCircle2 className="mr-2 h-5 w-5" />
-                      Đã gửi!
+                      Sent!
                     </>
                   ) : (
-                    'Gửi mã xác thực'
+                    'Send Verification Code'
                   )}
                 </Button>
               </form>
@@ -151,7 +151,7 @@ export default function ForgotPasswordPage() {
                   className="text-primary font-semibold hover:underline transition-colors inline-flex items-center gap-2"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Quay lại đăng nhập
+                  Back to login
                 </Link>
               </div>
             </CardContent>

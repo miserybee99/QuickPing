@@ -1,7 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import passport from 'passport';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import School from '../models/School.js';
@@ -11,6 +10,28 @@ import { authenticate } from '../middleware/auth.js';
 import { sendOTPEmail } from '../services/email.service.js';
 
 const router = express.Router();
+
+/**
+ * Validate if email domain contains 'edu' as standalone word
+ * This ensures only student emails from educational institutions are accepted
+ * @param {string} email - Email address to validate
+ * @returns {boolean} - true if valid student email, false otherwise
+ */
+function isValidStudentEmail(email) {
+  const normalizedEmail = email.toLowerCase().trim();
+
+  // Extract domain part (after @)
+  const atIndex = normalizedEmail.indexOf('@');
+  if (atIndex === -1 || atIndex === normalizedEmail.length - 1) {
+    return false;
+  }
+
+  const domain = normalizedEmail.substring(atIndex + 1);
+
+  // Split domain by dots and check if any part exactly equals 'edu'
+  const domainParts = domain.split('.');
+  return domainParts.includes('edu');
+}
 
 // Register
 router.post('/register', [
@@ -30,9 +51,16 @@ router.post('/register', [
     // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
+    // Validate student email domain (grandfather policy: only new registrations)
+    if (!isValidStudentEmail(normalizedEmail)) {
+      return res.status(400).json({
+        error: 'Email must be a valid student email (domain must contain "edu"). Example: student@hcmute.edu.vn'
+      });
+    }
+
     // Check if user exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email: normalizedEmail }, { username: username.trim() }] 
+    const existingUser = await User.findOne({
+      $or: [{ email: normalizedEmail }, { username: username.trim() }]
     });
 
     if (existingUser) {
@@ -91,7 +119,7 @@ router.post('/register', [
     }
 
     res.status(201).json({
-      message: 'Tài khoản đã được tạo. Vui lòng kiểm tra email để xác thực.',
+      message: 'Account created successfully. Please check your email to verify.',
       token,
       requireVerification: true,
       user: {
@@ -124,16 +152,16 @@ router.post('/login', [
 
     const normalizedEmail = email.toLowerCase().trim();
     console.log('🔍 Login attempt:', { email: normalizedEmail, passwordLength: password.length });
-    
+
     // Try to find user with normalized email
     const user = await User.findOne({ email: normalizedEmail });
-    
+
     if (!user) {
       // Try case-insensitive search as fallback
-      const userCaseInsensitive = await User.findOne({ 
-        email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') } 
+      const userCaseInsensitive = await User.findOne({
+        email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') }
       });
-      
+
       if (userCaseInsensitive) {
         console.log('⚠️ Found user with different case, updating email to normalized version');
         userCaseInsensitive.email = normalizedEmail;
@@ -143,15 +171,15 @@ router.post('/login', [
           // Update last seen
           userCaseInsensitive.last_seen = new Date();
           await userCaseInsensitive.save();
-          
+
           // 2FA: Always require OTP for every login
           console.log('🔐 Sending login OTP to:', userCaseInsensitive.email);
-          
+
           await OTP.deleteMany({ email: userCaseInsensitive.email });
-          
+
           const otp = OTP.generateOTP();
           const otpHash = await bcrypt.hash(otp, 10);
-          
+
           const otpDoc = new OTP({
             user_id: userCaseInsensitive._id,
             email: userCaseInsensitive.email,
@@ -160,18 +188,18 @@ router.post('/login', [
             expires_at: OTP.getExpiryTime()
           });
           await otpDoc.save();
-          
+
           try {
             await sendOTPEmail(userCaseInsensitive.email, userCaseInsensitive.username, otp);
           } catch (emailError) {
             console.error('Failed to send login OTP:', emailError);
           }
-          
+
           // Return 403 to indicate OTP verification required
           return res.status(403).json({
             requireVerification: true,
             email: userCaseInsensitive.email,
-            message: 'Vui lòng kiểm tra email và nhập mã OTP để đăng nhập.'
+            message: 'Please check your email and enter the OTP code to login.'
           });
         }
       }
@@ -183,13 +211,13 @@ router.post('/login', [
 
     if (!user.password_hash) {
       console.log('❌ User has no password_hash');
-      return res.status(401).json({ error: 'Please use OAuth login' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     console.log('🔐 Comparing password...');
     const isValid = await bcrypt.compare(password, user.password_hash);
     console.log('🔐 Password match:', isValid);
-    
+
     if (!isValid) {
       console.log('❌ Password mismatch');
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -201,14 +229,14 @@ router.post('/login', [
 
     // 2FA: Always require OTP for every login (not just unverified users)
     console.log('🔐 Sending login OTP to:', user.email);
-    
+
     // Delete existing OTPs for this user
     await OTP.deleteMany({ email: user.email });
-    
+
     // Generate and send new OTP
     const otp = OTP.generateOTP();
     const otpHash = await bcrypt.hash(otp, 10);
-    
+
     const otpDoc = new OTP({
       user_id: user._id,
       email: user.email,
@@ -217,7 +245,7 @@ router.post('/login', [
       expires_at: OTP.getExpiryTime()
     });
     await otpDoc.save();
-    
+
     // Send OTP email
     try {
       await sendOTPEmail(user.email, user.username, otp);
@@ -225,12 +253,12 @@ router.post('/login', [
     } catch (emailError) {
       console.error('Failed to send login OTP:', emailError);
     }
-    
+
     // Return 403 to indicate OTP verification required, no token yet
     return res.status(403).json({
       requireVerification: true,
       email: user.email,
-      message: 'Vui lòng kiểm tra email và nhập mã OTP để đăng nhập.'
+      message: 'Please check your email and enter the OTP code to login.'
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -264,7 +292,7 @@ router.get('/me', authenticate, async (req, res) => {
     const user = await User.findById(req.user._id)
       .select('-password_hash')
       .populate('school_id', 'name domain');
-    
+
     res.json({ user });
   } catch (error) {
     console.error('Get me error:', error);
@@ -313,12 +341,12 @@ router.post('/send-otp', [
     // Find user
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
-      return res.status(404).json({ error: 'Không tìm thấy tài khoản với email này' });
+      return res.status(404).json({ error: 'Account not found with this email' });
     }
 
     // Check if already verified
     if (user.is_verified) {
-      return res.status(400).json({ error: 'Email đã được xác thực' });
+      return res.status(400).json({ error: 'Email already verified' });
     }
 
     // Rate limiting: Check resend count in last hour
@@ -330,8 +358,8 @@ router.post('/send-otp', [
 
     const maxResend = parseInt(process.env.OTP_MAX_RESEND_PER_HOUR) || 5;
     if (recentOTPs >= maxResend) {
-      return res.status(429).json({ 
-        error: `Bạn đã yêu cầu quá nhiều mã. Vui lòng thử lại sau 1 giờ.`,
+      return res.status(429).json({
+        error: `Too many requests. Please try again after 1 hour.`,
         retryAfter: 3600
       });
     }
@@ -355,15 +383,15 @@ router.post('/send-otp', [
     // Send email
     await sendOTPEmail(normalizedEmail, user.username, otp);
 
-    res.json({ 
-      message: 'Mã xác thực đã được gửi đến email của bạn',
+    res.json({
+      message: 'Verification code has been sent to your email',
       email: normalizedEmail,
       expiresIn: parseInt(process.env.OTP_EXPIRES_MINUTES) || 10
     });
 
   } catch (error) {
     console.error('Send OTP error:', error);
-    res.status(500).json({ error: 'Không thể gửi mã xác thực. Vui lòng thử lại.' });
+    res.status(500).json({ error: 'Unable to send verification code. Please try again.' });
   }
 });
 
@@ -389,28 +417,28 @@ router.post('/verify-otp', [
     });
 
     if (!otpDoc) {
-      return res.status(400).json({ error: 'Mã xác thực không hợp lệ hoặc đã hết hạn' });
+      return res.status(400).json({ error: 'Invalid or expired verification code' });
     }
 
     // Check attempts
     const maxAttempts = parseInt(process.env.OTP_MAX_ATTEMPTS) || 5;
     if (otpDoc.attempts >= maxAttempts) {
-      return res.status(429).json({ 
-        error: 'Đã vượt quá số lần thử. Vui lòng yêu cầu mã mới.' 
+      return res.status(429).json({
+        error: 'Maximum attempts exceeded. Please request a new code.'
       });
     }
 
     // Verify OTP
     const isValid = await bcrypt.compare(otp, otpDoc.otp_hash);
-    
+
     if (!isValid) {
       // Increment attempts
       otpDoc.attempts += 1;
       await otpDoc.save();
-      
+
       const remainingAttempts = maxAttempts - otpDoc.attempts;
-      return res.status(400).json({ 
-        error: `Mã xác thực không đúng. Còn ${remainingAttempts} lần thử.`,
+      return res.status(400).json({
+        error: `Invalid verification code. ${remainingAttempts} attempts remaining.`,
         remainingAttempts
       });
     }
@@ -422,7 +450,7 @@ router.post('/verify-otp', [
     // Update user as verified
     const user = await User.findById(otpDoc.user_id);
     if (!user) {
-      return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+      return res.status(404).json({ error: 'User not found' });
     }
 
     user.is_verified = true;
@@ -444,7 +472,7 @@ router.post('/verify-otp', [
     await session.save();
 
     res.json({
-      message: 'Email đã được xác thực thành công!',
+      message: 'Email verified successfully!',
       token,
       user: {
         _id: user._id,
@@ -461,7 +489,7 @@ router.post('/verify-otp', [
 
   } catch (error) {
     console.error('Verify OTP error:', error);
-    res.status(500).json({ error: 'Không thể xác thực. Vui lòng thử lại.' });
+    res.status(500).json({ error: 'Unable to verify. Please try again.' });
   }
 });
 
@@ -481,11 +509,11 @@ router.post('/resend-otp', [
     // Find user
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
-      return res.status(404).json({ error: 'Không tìm thấy tài khoản với email này' });
+      return res.status(404).json({ error: 'Account not found with this email' });
     }
 
     if (user.is_verified) {
-      return res.status(400).json({ error: 'Email đã được xác thực' });
+      return res.status(400).json({ error: 'Email already verified' });
     }
 
     // Check cooldown
@@ -496,10 +524,10 @@ router.post('/resend-otp', [
     if (lastOTP) {
       const timeSinceLastOTP = Date.now() - lastOTP.created_at.getTime();
       const remainingCooldown = cooldownSeconds * 1000 - timeSinceLastOTP;
-      
+
       if (remainingCooldown > 0) {
         return res.status(429).json({
-          error: 'Vui lòng đợi trước khi yêu cầu mã mới',
+          error: 'Please wait before requesting a new code',
           retryAfter: Math.ceil(remainingCooldown / 1000)
         });
       }
@@ -514,8 +542,8 @@ router.post('/resend-otp', [
 
     const maxResend = parseInt(process.env.OTP_MAX_RESEND_PER_HOUR) || 5;
     if (recentOTPs >= maxResend) {
-      return res.status(429).json({ 
-        error: `Bạn đã yêu cầu quá nhiều mã. Vui lòng thử lại sau 1 giờ.`,
+      return res.status(429).json({
+        error: `Too many requests. Please try again after 1 hour.`,
         retryAfter: 3600
       });
     }
@@ -538,103 +566,16 @@ router.post('/resend-otp', [
     // Send email
     await sendOTPEmail(normalizedEmail, user.username, otp);
 
-    res.json({ 
-      message: 'Mã xác thực mới đã được gửi',
+    res.json({
+      message: 'New verification code has been sent',
       email: normalizedEmail,
       expiresIn: parseInt(process.env.OTP_EXPIRES_MINUTES) || 10
     });
 
   } catch (error) {
     console.error('Resend OTP error:', error);
-    res.status(500).json({ error: 'Không thể gửi mã xác thực. Vui lòng thử lại.' });
+    res.status(500).json({ error: 'Unable to send verification code. Please try again.' });
   }
-});
-
-// ==================== GOOGLE OAUTH ENDPOINTS ====================
-
-// Initiate Google OAuth
-router.get('/google', (req, res, next) => {
-  // Check if Google OAuth is configured
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    return res.status(501).json({ 
-      error: 'Đăng nhập Google chưa được cấu hình. Vui lòng liên hệ admin.' 
-    });
-  }
-  
-  passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    session: false,
-    prompt: 'consent select_account', // Always show consent + account selection popup
-    accessType: 'offline', // Get refresh token
-    includeGrantedScopes: true // Include previously granted scopes
-  })(req, res, next);
-});
-
-// Google OAuth callback
-router.get('/google/callback', (req, res, next) => {
-  passport.authenticate('google', { 
-    session: false,
-    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_auth_failed`
-  }, async (err, user) => {
-    try {
-      if (err) {
-        console.error('❌ Google OAuth error:', err);
-        return res.redirect(
-          `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=${encodeURIComponent(err.message || 'google_auth_failed')}`
-        );
-      }
-
-      if (!user) {
-        console.error('❌ Google OAuth: No user returned');
-        return res.redirect(
-          `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_auth_failed`
-        );
-      }
-
-      // Update online status
-      user.is_online = true;
-      user.last_seen = new Date();
-      await user.save();
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { userId: user._id },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-      );
-
-      // Save session
-      const session = new UserSession({
-        user_id: user._id,
-        token,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      });
-      await session.save();
-
-      console.log('✅ Google OAuth successful for:', user.email);
-
-      // Redirect to frontend with token
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
-      
-    } catch (error) {
-      console.error('❌ Google OAuth callback error:', error);
-      res.redirect(
-        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=server_error`
-      );
-    }
-  })(req, res, next);
-});
-
-// Check Google OAuth status
-router.get('/google/status', (req, res) => {
-  const isConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
-  res.json({ 
-    enabled: isConfigured,
-    message: isConfigured 
-      ? 'Google OAuth đã được cấu hình' 
-      : 'Google OAuth chưa được cấu hình'
-  });
 });
 
 // ==================== FORGOT PASSWORD ENDPOINTS ====================
@@ -656,16 +597,9 @@ router.post('/forgot-password', [
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       // Don't reveal if email exists or not (security)
-      return res.json({ 
-        message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được mã xác thực để đặt lại mật khẩu.',
+      return res.json({
+        message: 'If the email exists in the system, you will receive a verification code to reset your password.',
         email: normalizedEmail
-      });
-    }
-
-    // Check if user has password (OAuth users don't have password)
-    if (!user.password_hash) {
-      return res.status(400).json({ 
-        error: 'Tài khoản này đăng nhập bằng Google. Không thể đặt lại mật khẩu.' 
       });
     }
 
@@ -679,16 +613,16 @@ router.post('/forgot-password', [
 
     const maxResend = parseInt(process.env.OTP_MAX_RESEND_PER_HOUR) || 5;
     if (recentResets >= maxResend) {
-      return res.status(429).json({ 
-        error: `Bạn đã yêu cầu quá nhiều mã. Vui lòng thử lại sau 1 giờ.`,
+      return res.status(429).json({
+        error: `Too many requests. Please try again after 1 hour.`,
         retryAfter: 3600
       });
     }
 
     // Delete any existing password reset OTPs for this email
-    await OTP.deleteMany({ 
-      email: normalizedEmail, 
-      type: 'password_reset' 
+    await OTP.deleteMany({
+      email: normalizedEmail,
+      type: 'password_reset'
     });
 
     // Generate new OTP
@@ -711,15 +645,15 @@ router.post('/forgot-password', [
 
     console.log('🔐 Password reset OTP sent to:', normalizedEmail);
 
-    res.json({ 
-      message: 'Mã xác thực đã được gửi đến email của bạn',
+    res.json({
+      message: 'Verification code has been sent to your email',
       email: normalizedEmail,
       expiresIn: parseInt(process.env.OTP_EXPIRES_MINUTES) || 10
     });
 
   } catch (error) {
     console.error('Forgot password error:', error);
-    res.status(500).json({ error: 'Không thể gửi mã xác thực. Vui lòng thử lại.' });
+    res.status(500).json({ error: 'Unable to send verification code. Please try again.' });
   }
 });
 
@@ -747,28 +681,28 @@ router.post('/reset-password', [
     });
 
     if (!otpDoc) {
-      return res.status(400).json({ error: 'Mã xác thực không hợp lệ hoặc đã hết hạn' });
+      return res.status(400).json({ error: 'Invalid or expired verification code' });
     }
 
     // Check attempts
     const maxAttempts = parseInt(process.env.OTP_MAX_ATTEMPTS) || 5;
     if (otpDoc.attempts >= maxAttempts) {
-      return res.status(429).json({ 
-        error: 'Đã vượt quá số lần thử. Vui lòng yêu cầu mã mới.' 
+      return res.status(429).json({
+        error: 'Maximum attempts exceeded. Please request a new code.'
       });
     }
 
     // Verify OTP
     const isValid = await bcrypt.compare(otp, otpDoc.otp_hash);
-    
+
     if (!isValid) {
       // Increment attempts
       otpDoc.attempts += 1;
       await otpDoc.save();
-      
+
       const remainingAttempts = maxAttempts - otpDoc.attempts;
-      return res.status(400).json({ 
-        error: `Mã xác thực không đúng. Còn ${remainingAttempts} lần thử.`,
+      return res.status(400).json({
+        error: `Invalid verification code. ${remainingAttempts} attempts remaining.`,
         remainingAttempts
       });
     }
@@ -780,7 +714,7 @@ router.post('/reset-password', [
     // Find user and update password
     const user = await User.findById(otpDoc.user_id);
     if (!user) {
-      return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+      return res.status(404).json({ error: 'User not found' });
     }
 
     // Hash new password
@@ -794,13 +728,13 @@ router.post('/reset-password', [
     console.log('🔐 Password reset successfully for:', user.email);
 
     res.json({
-      message: 'Mật khẩu đã được đặt lại thành công! Vui lòng đăng nhập lại.',
+      message: 'Password reset successfully! Please login again.',
       success: true
     });
 
   } catch (error) {
     console.error('Reset password error:', error);
-    res.status(500).json({ error: 'Không thể đặt lại mật khẩu. Vui lòng thử lại.' });
+    res.status(500).json({ error: 'Unable to reset password. Please try again.' });
   }
 });
 

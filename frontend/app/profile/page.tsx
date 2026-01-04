@@ -14,9 +14,11 @@ import { useUser } from '@/hooks/useUser';
 import { apiClient } from '@/lib/api-client';
 import { AvatarUploadDropzone } from '@/components/profile/avatar-upload-dropzone';
 import { PageHeader, PageContainer, PageWrapper, PageScrollArea } from '@/components/layout';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function ProfilePage() {
   const { user, updateUser } = useUser();
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
   // Profile state
@@ -77,10 +79,19 @@ export default function ProfilePage() {
         updateUser(updatedUser);
       }
       
-      alert('Profile updated successfully!');
-    } catch (error) {
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+        variant: "success"
+      });
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      alert('Could not update profile. Please try again.');
+      const errorMessage = error?.response?.data?.error || 'Could not update profile. Please try again.';
+      toast({
+        title: "Update Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }

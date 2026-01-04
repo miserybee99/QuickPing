@@ -110,19 +110,11 @@ export function MessageActions({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={onReply} className="cursor-pointer">
-                <Reply className="h-4 w-4 mr-2" />
-                Reply
-              </DropdownMenuItem>
+              {/* Removed Reply and Add Reaction as they're already in the action bar */}
               
               <DropdownMenuItem onClick={onThread} className="cursor-pointer">
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Reply in Thread
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem onClick={onReact} className="cursor-pointer">
-                <Smile className="h-4 w-4 mr-2" />
-                Add Reaction
               </DropdownMenuItem>
               
               {canPin && (

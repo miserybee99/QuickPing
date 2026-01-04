@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
 
 export const setupSocketIO = (io) => {
   const userSockets = new Map(); // userId -> socketId
@@ -32,8 +33,11 @@ export const setupSocketIO = (io) => {
     // Join conversation rooms user is part of
     try {
       const conversations = await Conversation.find({ 'participants.user_id': userId });
+      console.log(`📥 User ${userId} found ${conversations.length} conversations to join`);
       conversations.forEach(conv => {
-        socket.join(`conversation_${conv._id}`);
+        const room = `conversation_${conv._id}`;
+        socket.join(room);
+        console.log(`   ✅ User ${userId} joined room: ${room}`);
       });
       
       // Send initial online statuses for users in user's conversations
@@ -216,15 +220,32 @@ export const setupSocketIO = (io) => {
     });
 
     // Handle thread reply sent
-    socket.on('thread_reply_sent', (data) => {
+    socket.on('thread_reply_sent', async (data) => {
       console.log(`💬 User ${userId} replied to thread ${data.thread_id}`);
       
-      io.to(`conversation_${data.conversation_id}`).emit('thread_updated', {
-        thread_id: data.thread_id,
-        conversation_id: data.conversation_id,
-        reply_count: data.reply_count,
-        last_reply: data.message
-      });
+      try {
+        // Count actual thread replies from database for accuracy
+        const actualReplyCount = await Message.countDocuments({ thread_id: data.thread_id });
+        
+        console.log(`📊 Thread ${data.thread_id} now has ${actualReplyCount} replies`);
+        
+        // Broadcast to ALL users in conversation (including sender) to ensure consistency
+        io.to(`conversation_${data.conversation_id}`).emit('thread_updated', {
+          thread_id: data.thread_id,
+          conversation_id: data.conversation_id,
+          reply_count: actualReplyCount,
+          last_reply: data.message
+        });
+      } catch (error) {
+        console.error('Error counting thread replies:', error);
+        // Fallback to client-provided count
+        io.to(`conversation_${data.conversation_id}`).emit('thread_updated', {
+          thread_id: data.thread_id,
+          conversation_id: data.conversation_id,
+          reply_count: data.reply_count || 0,
+          last_reply: data.message
+        });
+      }
     });
 
     // Handle vote created

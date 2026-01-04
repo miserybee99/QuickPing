@@ -5,9 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import passport from 'passport';
 import connectDB from './config/database.js';
-import configurePassport from './config/passport.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import conversationRoutes from './routes/conversations.js';
@@ -16,6 +14,7 @@ import friendRoutes, { setIO as setFriendsSocketIO } from './routes/friends.js';
 import fileRoutes from './routes/files.js';
 import voteRoutes from './routes/votes.js';
 import aiRoutes from './routes/ai.js';
+import deadlineRoutes from './routes/deadlines.js';
 import { setupSocketIO } from './socket/socket.js';
 import { authenticateSocket } from './middleware/auth.js';
 
@@ -68,15 +67,14 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Initialize Passport
-app.use(passport.initialize());
-configurePassport();
-
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect to MongoDB
 connectDB();
+
+// Make io accessible to routes via req.app.get('io')
+app.set('io', io);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -87,6 +85,7 @@ app.use('/api/friends', friendRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/deadlines', deadlineRoutes);
 
 // Setup Socket.IO
 io.use(authenticateSocket);

@@ -74,7 +74,6 @@ export interface RolePermissions {
   canRemoveMembers: boolean;
   canEditGroupInfo: boolean;
   canPinMessages: boolean;
-  canDeleteMessages: boolean;
   canInviteMembers: boolean;
 }
 
@@ -127,6 +126,19 @@ export interface Vote {
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
+}
+
+// Deadline types
+export interface Deadline {
+  _id: string;
+  conversation_id: string | Conversation;
+  created_by: string | User;
+  title: string;
+  description?: string;
+  due_date: Date | string;
+  is_overdue?: boolean;
+  created_at: Date | string;
+  updated_at: Date | string;
 }
 
 // ==================== OTP & Auth Types ====================

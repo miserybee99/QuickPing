@@ -39,7 +39,6 @@ const permissionMatrix = {
     canRemoveMembers: true,
     canEditGroupInfo: true,
     canPinMessages: true,
-    canDeleteMessages: true,
     canInviteMembers: true,
   },
   moderator: {
@@ -48,7 +47,6 @@ const permissionMatrix = {
     canRemoveMembers: true,
     canEditGroupInfo: false,
     canPinMessages: true,
-    canDeleteMessages: true,
     canInviteMembers: true,
   },
   member: {
@@ -57,7 +55,6 @@ const permissionMatrix = {
     canRemoveMembers: false,
     canEditGroupInfo: false,
     canPinMessages: false,
-    canDeleteMessages: false,
     canInviteMembers: false,
   },
 };
@@ -68,7 +65,6 @@ const permissionLabels: Record<string, string> = {
   canRemoveMembers: 'Remove Members',
   canEditGroupInfo: 'Edit Group Info',
   canPinMessages: 'Pin Messages',
-  canDeleteMessages: 'Delete Any Message',
   canInviteMembers: 'Invite Members',
 };
 

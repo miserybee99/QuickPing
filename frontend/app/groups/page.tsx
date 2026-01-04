@@ -36,13 +36,23 @@ export default function GroupsPage() {
   const loadGroups = async () => {
     try {
       setLoading(true);
+      console.log('📡 Fetching groups...');
       const response = await apiClient.conversations.getAll();
-      const groupConversations = response.data.conversations.filter(
+      const allConversations = response.data.conversations || [];
+      const groupConversations = allConversations.filter(
         (conv: Conversation) => conv.type === 'group'
       );
+      console.log(`✅ Loaded ${groupConversations.length} groups`);
       setGroups(groupConversations);
-    } catch (error) {
-      console.error('Error loading groups:', error);
+    } catch (error: any) {
+      console.error('❌ Error loading groups:', error);
+      if (error.response) {
+        console.error('   Response status:', error.response.status);
+        console.error('   Response data:', error.response.data);
+      } else if (error.request) {
+        console.error('   No response received. Is backend running?');
+      }
+      setGroups([]); // Clear groups on error
     } finally {
       setLoading(false);
     }

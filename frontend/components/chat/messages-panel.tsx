@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Plus, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -33,13 +33,111 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const fetchConversationsRef = useRef<(() => Promise<void>) | null>(null);
+  
+  // Use refs to track userId and selectedId to avoid re-setting listeners
+  const userIdRef = useRef<string | null>(null);
+  const selectedIdRef = useRef<string | null>(null);
+  
+  // Update refs when values change
+  useEffect(() => {
+    userIdRef.current = user?._id?.toString() ?? null;
+  }, [user?._id]);
+  
+  useEffect(() => {
+    selectedIdRef.current = selectedId ?? null;
+  }, [selectedId]);
+
+  const fetchConversations = useCallback(async () => {
+    // Check if token exists before making request
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      console.warn('⚠️ No token found, skipping conversations fetch');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('📡 Fetching conversations with token:', token.substring(0, 20) + '...');
+      const response = await apiClient.conversations.getAll();
+      const conversations = response.data.conversations || [];
+      setConversations(conversations);
+      
+      // Join socket rooms for all conversations to ensure real-time updates
+      if (socket && conversations.length > 0) {
+        console.log(`🔌 Joining ${conversations.length} conversation rooms...`);
+        conversations.forEach(conv => {
+          if (conv._id) {
+            socket.emit('join_conversation', conv._id);
+            console.log(`   ✅ Joined room: conversation_${conv._id}`);
+          }
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching conversations:', error);
+      
+      // Log detailed error information
+      if (error.response) {
+        console.error('   Response status:', error.response.status);
+        console.error('   Response data:', error.response.data);
+      } else if (error.request) {
+        console.error('   No response received. Is backend running?');
+        console.error('   Request:', error.request);
+      } else {
+        console.error('   Error message:', error.message);
+      }
+      
+      if (error.response?.status === 401) {
+        // Token is invalid, clear it
+        console.warn('⚠️ Token expired or invalid, clearing auth data');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+        router.push('/login');
+      } else if (!error.response) {
+        // Network error - backend might not be running
+        console.error('🚨 Cannot connect to backend. Please check if backend server is running.');
+        setConversations([]); // Clear conversations on error
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [socket]);
+
+  // Store fetchConversations in ref to avoid stale closure
+  useEffect(() => {
+    fetchConversationsRef.current = fetchConversations;
+  }, [fetchConversations]);
 
   useEffect(() => {
     // Only fetch conversations after client-side hydration and user is loaded
     if (isClient && user) {
       fetchConversations();
     }
-  }, [isClient, user]);
+  }, [isClient, user, fetchConversations]);
+
+  // Ensure socket joins ALL conversation rooms to receive real-time messages
+  // This runs whenever conversations list changes to ensure we're always in all rooms
+  useEffect(() => {
+    if (!socket || !conversations.length) return;
+    
+    console.log(`🔌 Ensuring socket joins ALL ${conversations.length} conversation rooms for real-time updates...`);
+    const joinedRooms = new Set<string>();
+    
+    conversations.forEach(conv => {
+      if (conv._id) {
+        const conversationId = conv._id.toString();
+        if (!joinedRooms.has(conversationId)) {
+          // Always join - even if already in room, it's safe to re-join
+          socket.emit('join_conversation', conversationId);
+          joinedRooms.add(conversationId);
+          console.log(`   ✅ Joined room: conversation_${conversationId}`);
+        }
+      }
+    });
+  }, [socket, conversations]); // Re-run when conversations list changes (not just length)
 
   // Mark selected conversation as read (update local state for immediate UI feedback)
   useEffect(() => {
@@ -72,38 +170,117 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
           return conv;
         });
       });
-    }, 1500); // Wait a bit for the chat to load and mark as read
+    }, 500); // Wait 500ms for the chat to load and mark as read
     
     return () => clearTimeout(timer);
   }, [selectedId, user?._id]);
 
   // Socket.io listener for realtime conversation updates
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {
+      console.log('⚠️ Socket not available, skipping listener setup');
+      return;
+    }
 
     console.log('📡 Setting up socket listeners for conversation list');
 
     // Listen for new messages to update conversation list
     const handleMessageReceived = (data: { message: Message; conversation_id: string }) => {
       console.log('✉️ Conversation list received message event:', data);
+      console.log('   Message data:', {
+        messageId: data.message._id,
+        conversationId: data.conversation_id,
+        sender: data.message.sender_id?.username || data.message.sender_id,
+        content: data.message.content
+      });
       
       setConversations((prev) => {
-        return prev.map((conv) => {
-          if (conv._id === data.conversation_id) {
-            // Update last_message and timestamp
-            return {
-              ...conv,
-              last_message: data.message,
-              updated_at: data.message.created_at,
-            };
-          }
-          return conv;
-        }).sort((a, b) => {
-          // Sort by updated_at (most recent first)
-          const aTime = new Date(a.updated_at || a.created_at).getTime();
-          const bTime = new Date(b.updated_at || b.created_at).getTime();
-          return bTime - aTime;
+        console.log(`   Current conversations count: ${prev.length}`);
+        
+        // Check if conversation exists in list
+        const existingConv = prev.find(conv => {
+          const convId = conv._id?.toString();
+          const messageConvId = data.conversation_id?.toString();
+          return convId === messageConvId;
         });
+        
+        console.log(`   Conversation exists in list: ${!!existingConv}`);
+        
+        if (existingConv) {
+          // Update existing conversation
+          console.log('   ✅ Updating existing conversation in list');
+          return prev.map((conv) => {
+            if (conv._id?.toString() === data.conversation_id?.toString()) {
+              // Update last_message and timestamp
+              // If this is the current conversation and input is focused, mark message as read
+              const currentUserId = userIdRef.current;
+              const currentSelectedId = selectedIdRef.current;
+              
+              const senderId = data.message.sender_id?._id?.toString() || data.message.sender_id?.toString();
+              const isFromOtherUser = senderId && currentUserId && senderId !== currentUserId;
+              
+              // Check if conversation is selected (user is viewing it)
+              const isSelected = currentSelectedId && conv._id && currentSelectedId === conv._id.toString();
+              
+              // If message is from other user and conversation is selected, mark as read
+              let updatedMessage = data.message;
+              if (isFromOtherUser && isSelected && currentUserId) {
+                // Check if already read
+                const alreadyRead = data.message.read_by?.some(
+                  (r: any) => {
+                    const readUserId = typeof r.user_id === 'string' ? r.user_id : r.user_id?._id?.toString();
+                    return readUserId === currentUserId;
+                  }
+                );
+                
+                if (!alreadyRead) {
+                  // Optimistically mark as read in conversation list
+                  updatedMessage = {
+                    ...data.message,
+                    read_by: [
+                      ...(data.message.read_by || []),
+                      { user_id: currentUserId, read_at: new Date() }
+                    ]
+                  };
+                  console.log('   👁️ Conversation is selected, marking new message as read in list');
+                }
+              }
+              
+              return {
+                ...conv,
+                last_message: updatedMessage,
+                updated_at: data.message.created_at,
+              };
+            }
+            return conv;
+          }).sort((a, b) => {
+            // Sort by updated_at (most recent first)
+            const aTime = new Date(a.updated_at || a.created_at).getTime();
+            const bTime = new Date(b.updated_at || b.created_at).getTime();
+            return bTime - aTime;
+          });
+        } else {
+          // Conversation not in list - fetch all conversations
+          console.log('📥 Conversation not in list, will refresh conversations list...');
+          console.log(`   Missing conversation ID: ${data.conversation_id}`);
+          
+          // Also join the conversation room immediately to receive future messages
+          if (socket && data.conversation_id) {
+            console.log(`   🔌 Joining conversation room: conversation_${data.conversation_id}`);
+            socket.emit('join_conversation', data.conversation_id);
+          }
+          
+          // Use setTimeout to avoid calling fetchConversations inside setState
+          setTimeout(() => {
+            console.log('   🔄 Fetching conversations...');
+            if (fetchConversationsRef.current) {
+              fetchConversationsRef.current();
+            }
+          }, 100);
+          
+          // Return current list while fetching
+          return prev;
+        }
       });
     };
 
@@ -142,7 +319,7 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
       });
     };
     
-    // Listen for message read receipts to update unread status
+    // Listen for message read receipts to update unread status (bulk)
     const handleMessagesReadReceipt = (data: { 
       user_id: string; 
       conversation_id: string; 
@@ -151,23 +328,94 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
     }) => {
       console.log('📖 Messages read receipt in conversation list:', data);
       
+      // Only update if it's for the current user (when they mark messages as read)
+      const currentUserId = userIdRef.current;
+      if (!currentUserId || data.user_id !== currentUserId) {
+        console.log('   ⏭️ Skipping - not for current user');
+        return;
+      }
+      
       setConversations((prev) => {
         return prev.map((conv) => {
-          if (conv._id === data.conversation_id && conv.last_message) {
+          const convId = conv._id?.toString();
+          const dataConvId = data.conversation_id?.toString();
+          
+          if (convId && dataConvId && convId === dataConvId && conv.last_message) {
+            // Convert message_ids and last_message._id to strings for comparison
+            const lastMessageId = conv.last_message._id?.toString();
+            const messageIds = data.message_ids.map((id: any) => id?.toString());
+            
             // Check if the read message is the last message
-            if (data.message_ids.includes(conv.last_message._id)) {
+            if (lastMessageId && messageIds.includes(lastMessageId)) {
               const alreadyRead = conv.last_message.read_by?.some(
-                r => (typeof r.user_id === 'string' ? r.user_id : r.user_id?._id?.toString()) === data.user_id
+                (r: any) => {
+                  const readUserId = typeof r.user_id === 'string' ? r.user_id : r.user_id?._id?.toString();
+                  return readUserId === currentUserId;
+                }
               );
               
-              if (!alreadyRead) {
+              if (!alreadyRead && currentUserId) {
+                console.log('   ✅ Updating last_message read_by for conversation:', conv._id);
                 return {
                   ...conv,
                   last_message: {
                     ...conv.last_message,
                     read_by: [
                       ...(conv.last_message.read_by || []),
-                      { user_id: data.user_id, read_at: new Date(data.read_at) }
+                      { user_id: currentUserId, read_at: new Date(data.read_at) }
+                    ]
+                  }
+                };
+              }
+            }
+          }
+          return conv;
+        });
+      });
+    };
+    
+    // Listen for single read receipt to update unread status
+    const handleReadReceipt = (data: { 
+      user_id: string; 
+      message_id: string;
+      conversation_id: string; 
+      read_at: Date;
+    }) => {
+      console.log('📖 Single read receipt in conversation list:', data);
+      
+      // Only update if it's for the current user (when they mark a message as read)
+      const currentUserId = userIdRef.current;
+      if (!currentUserId || data.user_id !== currentUserId) {
+        console.log('   ⏭️ Skipping - not for current user');
+        return;
+      }
+      
+      setConversations((prev) => {
+        return prev.map((conv) => {
+          const convId = conv._id?.toString();
+          const dataConvId = data.conversation_id?.toString();
+          const lastMessageId = conv.last_message?._id?.toString();
+          const dataMessageId = data.message_id?.toString();
+          
+          if (convId && dataConvId && convId === dataConvId && conv.last_message) {
+            // Check if the read message is the last message
+            if (lastMessageId && dataMessageId && lastMessageId === dataMessageId) {
+              const alreadyRead = conv.last_message.read_by?.some(
+                (r: any) => {
+                  const readUserId = typeof r.user_id === 'string' ? r.user_id : r.user_id?._id?.toString();
+                  return readUserId === currentUserId;
+                }
+              );
+              
+              if (!alreadyRead && currentUserId) {
+                console.log('   ✅ Updating last_message read_by for conversation:', conv._id);
+                return {
+                  ...conv,
+                  last_message: {
+                    ...conv.last_message,
+                    read_by: [
+                      ...(conv.last_message.read_by || []),
+                      { user_id: currentUserId, read_at: new Date(data.read_at) }
                     ]
                   }
                 };
@@ -179,45 +427,124 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
       });
     };
 
+    // Listen for conversation updates (participant removal, role changes, etc.)
+    const handleConversationUpdated = (data: any) => {
+      console.log('📡 Conversation updated in conversation list:', data);
+      
+      if (data.conversation && data.type) {
+        const conversationId = data.conversation._id?.toString();
+        
+        // Handle participant removal
+        if (data.type === 'participant_removed') {
+          const currentUserId = userIdRef.current;
+          
+          // If current user was removed, remove conversation from list
+          if (data.removed_user_id === currentUserId && conversationId) {
+            console.log('👤 Current user was removed from conversation, removing from list');
+            setConversations((prev) => prev.filter(conv => conv._id?.toString() !== conversationId));
+            
+            // If this conversation was selected, deselect it
+            if (selectedId === conversationId) {
+              onSelect('');
+            }
+            return;
+          }
+          
+          // If someone else was removed, update the conversation with new participants
+          setConversations((prev) => {
+            return prev.map((conv) => {
+              if (conv._id?.toString() === conversationId) {
+                console.log('👤 Participant removed from conversation, updating participants list');
+                return {
+                  ...conv,
+                  participants: data.conversation.participants || conv.participants
+                };
+              }
+              return conv;
+            });
+          });
+        }
+        
+        // Handle participant addition - update conversation participants
+        if (data.type === 'participant_added') {
+          const currentUserId = userIdRef.current;
+          const addedUserIds = data.added_user_ids || [];
+          
+          // Check if current user was added to this conversation
+          const wasUserAdded = currentUserId && addedUserIds.includes(currentUserId);
+          
+          setConversations((prev) => {
+            const existingConv = prev.find(conv => conv._id?.toString() === conversationId);
+            
+            // If current user was added and conversation doesn't exist in list, add it
+            if (wasUserAdded && !existingConv) {
+              console.log('👤 Current user was added to conversation, adding to list');
+              
+              // Join conversation room immediately to receive messages
+              if (socket && conversationId) {
+                console.log(`   🔌 Joining conversation room: conversation_${conversationId}`);
+                socket.emit('join_conversation', conversationId);
+              }
+              
+              // Add conversation to list
+              return [...prev, data.conversation].sort((a, b) => {
+                const aTime = new Date(a.updated_at || a.created_at).getTime();
+                const bTime = new Date(b.updated_at || b.created_at).getTime();
+                return bTime - aTime;
+              });
+            }
+            
+            // If conversation exists, update participants
+            if (existingConv) {
+              console.log('👤 Participant(s) added to conversation, updating participants');
+              return prev.map((conv) => {
+                if (conv._id?.toString() === conversationId) {
+                  return {
+                    ...conv,
+                    participants: data.conversation.participants || conv.participants
+                  };
+                }
+                return conv;
+              });
+            }
+            
+            return prev;
+          });
+        }
+        
+        // Handle role changes - update conversation participants
+        if (data.type === 'role_change') {
+          setConversations((prev) => {
+            return prev.map((conv) => {
+              if (conv._id?.toString() === conversationId) {
+                console.log('👤 Role changed in conversation, updating participants');
+                return {
+                  ...conv,
+                  participants: data.conversation.participants || conv.participants
+                };
+              }
+              return conv;
+            });
+          });
+        }
+      }
+    };
+
     socket.on('message_received', handleMessageReceived);
     socket.on('user_status_changed', handleUserStatusChanged);
     socket.on('messages_read_receipt', handleMessagesReadReceipt);
+    socket.on('read_receipt', handleReadReceipt);
+    socket.on('conversation_updated', handleConversationUpdated);
 
     return () => {
       console.log('🔌 Cleaning up conversation list socket listeners');
       socket.off('message_received', handleMessageReceived);
       socket.off('user_status_changed', handleUserStatusChanged);
       socket.off('messages_read_receipt', handleMessagesReadReceipt);
+      socket.off('read_receipt', handleReadReceipt);
+      socket.off('conversation_updated', handleConversationUpdated);
     };
-  }, [socket]);
-
-  const fetchConversations = async () => {
-    // Check if token exists before making request
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (!token) {
-      console.warn('⚠️ No token found, skipping conversations fetch');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      console.log('📡 Fetching conversations with token:', token.substring(0, 20) + '...');
-      const response = await apiClient.conversations.getAll();
-      setConversations(response.data.conversations || []);
-    } catch (error: any) {
-      console.error('Error fetching conversations:', error);
-      if (error.response?.status === 401) {
-        // Token is invalid, clear it
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [socket]); // Only re-setup when socket changes to avoid missing messages
 
   const handleLogout = async () => {
     try {
@@ -243,6 +570,12 @@ export function MessagesPanel({ selectedId, onSelect }: MessagesPanelProps) {
       const conversation = response.data.conversation;
       
       console.log('✅ Conversation created/retrieved:', conversation._id);
+      
+      // Join conversation room immediately to receive messages
+      if (socket && conversation._id) {
+        console.log(`🔌 Joining conversation room: conversation_${conversation._id}`);
+        socket.emit('join_conversation', conversation._id);
+      }
       
       // Refresh conversations list to show the new conversation
       await fetchConversations();

@@ -5,7 +5,7 @@ export default function GlobalError({
   reset,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  reset?: () => void;
 }) {
   return (
     <html lang="en">
@@ -25,20 +25,22 @@ export default function GlobalError({
           <p style={{ color: '#666', marginBottom: '24px' }}>
             {error.message || 'An unexpected error occurred'}
           </p>
-          <button
-            onClick={() => reset()}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '16px',
-            }}
-          >
-            Try again
-          </button>
+          {reset && (
+            <button
+              onClick={() => reset()}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '16px',
+              }}
+            >
+              Try again
+            </button>
+          )}
         </div>
       </body>
     </html>

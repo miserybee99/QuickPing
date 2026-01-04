@@ -36,13 +36,13 @@ function ResetPasswordContent() {
 
     // Validate password match
     if (newPassword !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
+      setError('Passwords do not match');
       return;
     }
 
     // Validate password length
     if (newPassword.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      setError('Password must be at least 6 characters');
       return;
     }
 
@@ -66,7 +66,7 @@ function ResetPasswordContent() {
     } catch (err: any) {
       console.error('❌ Reset password error:', err.response?.data || err.message);
       const errorData = err.response?.data;
-      const errorMessage = errorData?.error || errorData?.message || 'Không thể đặt lại mật khẩu. Vui lòng thử lại.';
+      const errorMessage = errorData?.error || errorData?.message || 'Unable to reset password. Please try again.';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -95,9 +95,9 @@ function ResetPasswordContent() {
                 </div>
               </motion.div>
               <div className="space-y-2">
-                <CardTitle className="text-3xl font-bold">Đặt lại mật khẩu</CardTitle>
+                <CardTitle className="text-3xl font-bold">Reset Password</CardTitle>
                 <CardDescription className="text-base">
-                  Nhập mã OTP và mật khẩu mới của bạn
+                  Enter your OTP code and new password
                 </CardDescription>
               </div>
             </CardHeader>
@@ -123,7 +123,7 @@ function ResetPasswordContent() {
                   <Alert className="bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
                     <CheckCircle2 className="h-4 w-4" />
                     <AlertDescription>
-                      Mật khẩu đã được đặt lại thành công! Đang chuyển đến trang đăng nhập...
+                      Password reset successfully! Redirecting to login page...
                     </AlertDescription>
                   </Alert>
                 </motion.div>
@@ -132,7 +132,7 @@ function ResetPasswordContent() {
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="otp" className="text-base font-medium">
-                    Mã OTP (6 chữ số)
+                    OTP Code (6 digits)
                   </Label>
                   <div className="relative w-full">
                     <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
@@ -149,13 +149,13 @@ function ResetPasswordContent() {
                     />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Nhập mã 6 chữ số đã được gửi đến email {email}
+                    Enter the 6-digit code sent to {email}
                   </p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="newPassword" className="text-base font-medium">
-                    Mật khẩu mới
+                    New Password
                   </Label>
                   <div className="relative w-full">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
@@ -175,7 +175,7 @@ function ResetPasswordContent() {
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="text-base font-medium">
-                    Xác nhận mật khẩu mới
+                    Confirm New Password
                   </Label>
                   <div className="relative w-full">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
@@ -202,15 +202,15 @@ function ResetPasswordContent() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Đang xử lý...
+                      Processing...
                     </>
                   ) : success ? (
                     <>
                       <CheckCircle2 className="mr-2 h-5 w-5" />
-                      Thành công!
+                      Success!
                     </>
                   ) : (
-                    'Đặt lại mật khẩu'
+                    'Reset Password'
                   )}
                 </Button>
               </form>
@@ -221,7 +221,7 @@ function ResetPasswordContent() {
                     href="/forgot-password" 
                     className="text-primary font-semibold hover:underline transition-colors"
                   >
-                    Chưa nhận được mã? Gửi lại
+                    Didn't receive code? Resend
                   </Link>
                 </div>
                 <div>
@@ -230,7 +230,7 @@ function ResetPasswordContent() {
                     className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
                   >
                     <ArrowLeft className="h-4 w-4" />
-                    Quay lại đăng nhập
+                    Back to login
                   </Link>
                 </div>
               </div>

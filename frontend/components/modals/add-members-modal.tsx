@@ -91,11 +91,19 @@ export function AddMembersModal({
       ];
 
       // Update conversation with new participants
-      await apiClient.conversations.update(conversationId, {
+      const updateResponse = await apiClient.conversations.update(conversationId, {
         participants: updatedParticipants,
       });
 
-      onMembersAdded();
+      // Use the response from API to update UI immediately (don't wait for socket event)
+      const updatedConversation = updateResponse.data?.conversation || updateResponse.data;
+      
+      if (updatedConversation) {
+        console.log('✅ Members added successfully, updating UI immediately');
+        // Notify parent component with updated conversation
+        onMembersAdded();
+      }
+
       onOpenChange(false);
     } catch (error) {
       console.error('Error adding members:', error);

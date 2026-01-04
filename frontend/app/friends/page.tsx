@@ -56,16 +56,29 @@ export default function FriendsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('📡 Fetching friends data...');
       
       // Get accepted friends
       const friendsRes = await apiClient.friends.getAll();
-      setFriends(friendsRes.data.friends || []);
+      const friendsList = friendsRes.data.friends || [];
+      console.log(`✅ Loaded ${friendsList.length} friends`);
+      setFriends(friendsList);
       
       // Get pending incoming requests (people who sent requests to you)
       const requestsRes = await apiClient.friends.getRequests();
-      setRequests(requestsRes.data.requests || []);
-    } catch (error) {
-      console.error('Error loading data:', error);
+      const requestsList = requestsRes.data.requests || [];
+      console.log(`✅ Loaded ${requestsList.length} pending requests`);
+      setRequests(requestsList);
+    } catch (error: any) {
+      console.error('❌ Error loading friends data:', error);
+      if (error.response) {
+        console.error('   Response status:', error.response.status);
+        console.error('   Response data:', error.response.data);
+      } else if (error.request) {
+        console.error('   No response received. Is backend running?');
+      }
+      setFriends([]); // Clear friends on error
+      setRequests([]); // Clear requests on error
     } finally {
       setLoading(false);
     }

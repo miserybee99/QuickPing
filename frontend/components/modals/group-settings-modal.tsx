@@ -86,7 +86,7 @@ export function GroupSettingsModal({
     setHasChanges(nameChanged || descriptionChanged || avatarChanged);
   }, [name, description, avatarPreview, conversation]);
 
-  const canEdit = currentUserRole === 'admin' || currentUserRole === 'moderator';
+  const canEdit = currentUserRole === 'admin'; // Only admins can edit group info
   const canDelete = currentUserRole === 'admin';
 
   const handleAvatarClick = () => {
@@ -324,7 +324,7 @@ export function GroupSettingsModal({
           {!canEdit && (
             <div className="bg-amber-50 text-amber-700 p-3 rounded-lg text-sm flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span>Only Admin and Moderator can edit group settings.</span>
+              <span>Only Admin can edit group settings.</span>
             </div>
           )}
         </div>

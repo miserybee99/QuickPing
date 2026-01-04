@@ -35,10 +35,10 @@ backend/uploads/*
 *.sqlite
 
 # Claude/AI config
-.claude/
+
 .opencode/
 CLAUDE.md
-plans/
+
 .repomixignore
 CLAUDEKIT_GUIDE.md
 QuickPing_API.postman_collection.json

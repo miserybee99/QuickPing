@@ -7,11 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Moon, Sun, Bell, Lock, User as UserIcon, X, Monitor, BellRing, BellOff, Settings, Save, Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Moon, Sun, User as UserIcon, X, Monitor, Settings, Save, Loader2, Palette, UserCircle, LogOut, Trash2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useUser } from '@/hooks/useUser';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -19,6 +18,8 @@ import { PageHeader } from '@/components/layout';
 import { PageWrapper } from '@/components/layout';
 import { AvatarUploadDropzone } from '@/components/profile/avatar-upload-dropzone';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -26,6 +27,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { user, updateUser } = useUser();
   const { theme: savedTheme, setTheme: applySavedTheme, resolvedTheme } = useTheme();
+  const { toast } = useToast();
   
   // Profile state
   const [profile, setProfile] = useState({
@@ -65,74 +67,12 @@ export default function SettingsPage() {
     setHasUnsavedChanges(themeChanged);
   }, [pendingTheme, savedTheme]);
   
-  // Notification states
-  const [notifications, setNotifications] = useState({
-    messages: true,
-    friendRequests: true,
-    groupInvites: true,
-    mentions: true,
-    sound: true,
-    desktop: false,
-    doNotDisturb: false,
-  });
-  
-  // Privacy states
-  const [privacy, setPrivacy] = useState({
-    showOnlineStatus: true,
-    showReadReceipts: true,
-    messagePrivacy: 'everyone' as 'everyone' | 'friends',
-    groupPrivacy: 'everyone' as 'everyone' | 'friends' | 'none',
-  });
-  
-  // Desktop notification permission state
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
-  
   // Loading states
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Check notification permission on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
-  }, []);
-
-  // Load user preferences from backend
-  useEffect(() => {
-    if (user?.preferences) {
-      // Theme and fontSize are now managed by ThemeContext
-      // Load notification and privacy preferences
-      if (user.preferences.notifications) {
-        setNotifications(prev => ({
-          ...prev,
-          ...user.preferences.notifications,
-        }));
-      }
-      if (user.preferences.privacy) {
-        setPrivacy(prev => ({
-          ...prev,
-          ...user.preferences.privacy,
-        }));
-      }
-    }
-  }, [user]);
-
-  // Request desktop notification permission
-  const requestNotificationPermission = async () => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      if (permission === 'granted') {
-        setNotifications(prev => ({ ...prev, desktop: true }));
-        // Show a test notification
-        new Notification('QuickPing', {
-          body: 'Notifications enabled successfully!',
-          icon: '/logo.png',
-        });
-      }
-    }
-  };
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'profile' | 'preferences'>('profile');
 
   // Handle avatar upload
   const handleAvatarUpload = async (url: string) => {
@@ -163,10 +103,19 @@ export default function SettingsPage() {
         updateUser({ ...user, ...profile });
       }
       
-      alert('Profile updated successfully!');
-    } catch (error) {
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+        variant: "success"
+      });
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      alert('Could not update profile. Please try again.');
+      const errorMessage = error?.response?.data?.error || 'Could not update profile. Please try again.';
+      toast({
+        title: "Update Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setSavingProfile(false);
     }
@@ -181,19 +130,29 @@ export default function SettingsPage() {
         applySavedTheme(pendingTheme);
       }
       
-      // Save to backend
+      // Save to backend (only theme now)
       await apiClient.users.updatePreferences({
         theme: pendingTheme,
-        notifications,
-        privacy,
       });
       
       setHasUnsavedChanges(false);
       setSaveSuccess(true);
+      
+      toast({
+        title: "Settings Saved",
+        description: "Your preferences have been saved successfully.",
+        variant: "success"
+      });
+      
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving preferences:', error);
-      alert('Could not save settings. Please try again.');
+      const errorMessage = error?.response?.data?.error || 'Could not save settings. Please try again.';
+      toast({
+        title: "Save Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }
@@ -236,106 +195,155 @@ export default function SettingsPage() {
       />
 
       <ScrollArea className="flex-1">
-        <div className="container max-w-4xl mx-auto py-6 px-4 sm:px-6">
-          <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="privacy">Privacy</TabsTrigger>
-          <TabsTrigger value="account">Account</TabsTrigger>
-        </TabsList>
+        <div className="container max-w-5xl mx-auto py-8 px-4 sm:px-6">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'profile' | 'preferences')} className="w-full">
+            {/* Custom Tabs with Primary Color Active State - Matching Sidebar Style */}
+            <div className="flex gap-3 mb-8">
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={cn(
+                  "relative flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200",
+                  activeTab === 'profile'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <UserCircle className="w-4 h-4" strokeWidth={activeTab === 'profile' ? 2.5 : 2} />
+                Profile
+              </button>
+              <button
+                onClick={() => setActiveTab('preferences')}
+                className={cn(
+                  "relative flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200",
+                  activeTab === 'preferences'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <Palette className="w-4 h-4" strokeWidth={activeTab === 'preferences' ? 2.5 : 2} />
+                Preferences
+              </button>
+            </div>
 
-        {/* ====================================================================== */}
         {/* PROFILE TAB */}
-        {/* ====================================================================== */}
-        <TabsContent value="profile" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserIcon className="w-5 h-5" />
-                Profile Information
-              </CardTitle>
-              <CardDescription>
+            <TabsContent value="profile" className="space-y-6 mt-0">
+              <Card className="shadow-sm border">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <UserIcon className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Profile Information</CardTitle>
+                      <CardDescription className="mt-1">
                 Update your personal information and avatar
               </CardDescription>
+                    </div>
+                  </div>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Avatar Upload */}
-              <div className="space-y-4">
-                <Label>Avatar</Label>
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Avatar</Label>
+                    <div className="p-4 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/20">
                 <AvatarUploadDropzone
                   currentAvatarUrl={profile.avatar_url}
                   onAvatarChange={handleAvatarUpload}
                   username={profile.username}
                 />
+                    </div>
               </div>
 
-              <Separator />
+                  <Separator className="my-6" />
 
+                  {/* Form Fields */}
+                  <div className="grid gap-6">
               {/* Username */}
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                      <Label htmlFor="username" className="text-sm font-semibold">
+                        Username
+                      </Label>
                 <Input
                   id="username"
                   value={profile.username}
                   onChange={(e) => setProfile(prev => ({ ...prev, username: e.target.value }))}
-                  placeholder="Your username"
+                        placeholder="Enter your username"
+                        className="h-11"
                 />
               </div>
 
               {/* Email (read-only) */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email" className="text-sm font-semibold">
+                        Email Address
+                      </Label>
                 <Input
                   id="email"
                   value={profile.email}
                   disabled
-                  className="bg-muted"
+                        className="h-11 bg-muted/50 cursor-not-allowed"
                 />
-                <p className="text-sm text-muted-foreground">
-                  Email cannot be changed
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span>•</span> Email cannot be changed for security reasons
                 </p>
               </div>
 
               {/* MSSV (read-only) */}
               {profile.mssv && (
                 <div className="space-y-2">
-                  <Label htmlFor="mssv">Student ID (MSSV)</Label>
-                  <div className="flex items-center gap-2">
+                        <Label htmlFor="mssv" className="text-sm font-semibold">
+                          Student ID (MSSV)
+                        </Label>
+                        <div className="flex items-center gap-3">
                     <Input
                       id="mssv"
                       value={profile.mssv}
                       disabled
-                      className="bg-muted"
+                            className="h-11 bg-muted/50 cursor-not-allowed flex-1"
                     />
-                    <Badge variant="secondary">Verified</Badge>
+                          <Badge variant="secondary" className="px-3 py-1.5">
+                            Verified
+                          </Badge>
                   </div>
                 </div>
               )}
 
               {/* Bio */}
               <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
+                      <Label htmlFor="bio" className="text-sm font-semibold">
+                        Bio
+                      </Label>
                 <Textarea
                   id="bio"
                   value={profile.bio}
                   onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
                   placeholder="Tell us about yourself..."
                   rows={4}
+                        className="resize-none"
                 />
+                      <p className="text-xs text-muted-foreground">
+                        A brief description about yourself (optional)
+                      </p>
+                    </div>
               </div>
 
+                  <Separator className="my-6" />
+
               {/* Save Button */}
-              <Button onClick={handleSaveProfile} disabled={savingProfile} className="w-full">
+                  <Button 
+                    onClick={handleSaveProfile} 
+                    disabled={savingProfile} 
+                    className="w-full h-11 text-base font-semibold"
+                    size="lg"
+                  >
                 {savingProfile ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Saving Changes...
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4 mr-2" />
+                        <Save className="h-5 w-5" />
                     Save Profile
                   </>
                 )}
@@ -344,560 +352,228 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* ====================================================================== */}
-        {/* APPEARANCE TAB */}
-        {/* ====================================================================== */}
-        <TabsContent value="appearance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {resolvedTheme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                Theme
-              </CardTitle>
-              <CardDescription>
-                Choose light, dark, or system theme
+            {/* PREFERENCES TAB */}
+            <TabsContent value="preferences" className="space-y-6 mt-0">
+              {/* Appearance Section */}
+              <Card className="shadow-sm border">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      {resolvedTheme === 'dark' ? (
+                        <Moon className="w-5 h-5 text-primary" />
+                      ) : (
+                        <Sun className="w-5 h-5 text-primary" />
+                      )}
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Appearance</CardTitle>
+                      <CardDescription className="mt-1">
+                        Customize your theme and visual preferences
               </CardDescription>
+                    </div>
+                  </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
               {/* Theme Options */}
-              <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Theme</Label>
+                    <div className="grid grid-cols-3 gap-4">
                 <div
-                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        className={`relative flex flex-col items-center gap-3 p-6 rounded-xl border-2 cursor-pointer transition-all hover:scale-105 ${
                     pendingTheme === 'light'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/50'
+                            ? 'border-primary bg-primary/5 shadow-md'
+                            : 'border-border hover:border-muted-foreground/50 bg-background'
                   }`}
                   onClick={() => setPendingTheme('light')}
                 >
+                        <div className={`p-3 rounded-lg ${
+                          pendingTheme === 'light' ? 'bg-primary/10' : 'bg-muted'
+                        }`}>
                   <Sun className={`w-6 h-6 ${pendingTheme === 'light' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm font-medium ${pendingTheme === 'light' ? 'text-primary' : ''}`}>Light</span>
+                        </div>
+                        <span className={`text-sm font-medium ${pendingTheme === 'light' ? 'text-primary' : 'text-foreground'}`}>
+                          Light
+                        </span>
+                        {pendingTheme === 'light' && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          </div>
+                        )}
                 </div>
                 
                 <div
-                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        className={`relative flex flex-col items-center gap-3 p-6 rounded-xl border-2 cursor-pointer transition-all hover:scale-105 ${
                     pendingTheme === 'dark'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/50'
+                            ? 'border-primary bg-primary/5 shadow-md'
+                            : 'border-border hover:border-muted-foreground/50 bg-background'
                   }`}
                   onClick={() => setPendingTheme('dark')}
                 >
+                        <div className={`p-3 rounded-lg ${
+                          pendingTheme === 'dark' ? 'bg-primary/10' : 'bg-muted'
+                        }`}>
                   <Moon className={`w-6 h-6 ${pendingTheme === 'dark' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm font-medium ${pendingTheme === 'dark' ? 'text-primary' : ''}`}>Dark</span>
+                        </div>
+                        <span className={`text-sm font-medium ${pendingTheme === 'dark' ? 'text-primary' : 'text-foreground'}`}>
+                          Dark
+                        </span>
+                        {pendingTheme === 'dark' && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          </div>
+                        )}
                 </div>
                 
                 <div
-                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        className={`relative flex flex-col items-center gap-3 p-6 rounded-xl border-2 cursor-pointer transition-all hover:scale-105 ${
                     pendingTheme === 'system'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-muted-foreground/50'
+                            ? 'border-primary bg-primary/5 shadow-md'
+                            : 'border-border hover:border-muted-foreground/50 bg-background'
                   }`}
                   onClick={() => setPendingTheme('system')}
                 >
+                        <div className={`p-3 rounded-lg ${
+                          pendingTheme === 'system' ? 'bg-primary/10' : 'bg-muted'
+                        }`}>
                   <Monitor className={`w-6 h-6 ${pendingTheme === 'system' ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm font-medium ${pendingTheme === 'system' ? 'text-primary' : ''}`}>System</span>
+                        </div>
+                        <span className={`text-sm font-medium ${pendingTheme === 'system' ? 'text-primary' : 'text-foreground'}`}>
+                          System
+                        </span>
+                        {pendingTheme === 'system' && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          </div>
+                        )}
                 </div>
               </div>
               
               {pendingTheme === 'system' && (
-                <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                      <div className="mt-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
                   Theme will automatically change based on your system settings.
-                  Currently using {resolvedTheme === 'dark' ? 'dark' : 'light'} mode.
+                          Currently using <span className="font-semibold">{resolvedTheme === 'dark' ? 'dark' : 'light'}</span> mode.
                 </p>
+                      </div>
               )}
               
               {hasUnsavedChanges && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 p-3 rounded-lg">
-                  ⚠️ You have unsaved changes. Click "Save Changes" to apply.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                      <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                        <p className="text-sm text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                          <span>⚠️</span>
+                          You have unsaved changes. Click "Save Changes" to apply.
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
-          {/* Save Button */}
-          <div className="flex justify-end gap-3">
+                  <Separator className="my-6" />
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row justify-end gap-3">
             <Button
               variant="outline"
               onClick={handleResetAppearance}
               disabled={!hasUnsavedChanges}
+                      className="h-11"
             >
               Discard Changes
             </Button>
             <Button
               variant="outline"
               onClick={handleResetToDefaults}
+                      className="h-11"
             >
               Reset to Defaults
             </Button>
-            <Button onClick={handleSavePreferences} disabled={saving || !hasUnsavedChanges}>
-              {saving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}
+                    <Button 
+                      onClick={handleSavePreferences} 
+                      disabled={saving || !hasUnsavedChanges}
+                      className="h-11 min-w-[140px]"
+                      size="lg"
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : saveSuccess ? (
+                        <>
+                          <span>✓</span>
+                          Saved
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
             </Button>
-          </div>
-        </TabsContent>
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* ====================================================================== */}
-        {/* NOTIFICATIONS TAB */}
-        {/* ====================================================================== */}
-        <TabsContent value="notifications" className="space-y-4">
-          {/* Desktop Notifications Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BellRing className="w-5 h-5" />
-                Desktop Notifications
-              </CardTitle>
-              <CardDescription>
-                Receive notifications even when the app is not open
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {notificationPermission === 'granted' ? (
-                <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+              {/* Account Section */}
+              <Card className="shadow-sm border">
+                <CardHeader className="pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                      <Bell className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <UserCircle className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium text-green-700 dark:text-green-300">Notifications enabled</p>
-                      <p className="text-sm text-green-600 dark:text-green-400">You will receive notifications from QuickPing</p>
+                      <CardTitle className="text-xl">Account Information</CardTitle>
+                      <CardDescription className="mt-1">
+                        View your account details and manage account actions
+                      </CardDescription>
                     </div>
                   </div>
-                  <Switch
-                    checked={notifications.desktop}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, desktop: checked })
-                    }
-                  />
-                </div>
-              ) : notificationPermission === 'denied' ? (
-                <div className="p-4 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
-                      <BellOff className="w-5 h-5 text-red-600 dark:text-red-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-red-700 dark:text-red-300">Notifications blocked</p>
-                      <p className="text-sm text-red-600 dark:text-red-400">
-                        Please enable notifications in your browser settings
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-muted rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Bell className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Enable Desktop Notifications</p>
-                        <p className="text-sm text-muted-foreground">
-                          Receive notifications even when QuickPing tab is not open
-                        </p>
-                      </div>
-                    </div>
-                    <Button onClick={requestNotificationPermission}>
-                      Enable
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Do Not Disturb */}
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <BellOff className={`w-5 h-5 ${notifications.doNotDisturb ? 'text-orange-500' : 'text-muted-foreground'}`} />
-                  <div>
-                    <Label htmlFor="dnd-toggle" className="font-medium">
-                      Do Not Disturb
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Temporarily disable all notifications
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  id="dnd-toggle"
-                  checked={notifications.doNotDisturb}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, doNotDisturb: checked })
-                  }
-                />
-              </div>
-              {notifications.doNotDisturb && (
-                <p className="text-sm text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 p-3 rounded-lg">
-                  🔕 Do Not Disturb mode is on. You won't receive any notifications.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Notification Types Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                Notification Types
-              </CardTitle>
-              <CardDescription>
-                Choose which notifications you want to receive
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b">
                   <div>
-                    <Label htmlFor="notif-messages" className="font-medium">
-                      New Messages
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified when you receive new messages
-                    </p>
-                  </div>
-                  <Switch
-                    id="notif-messages"
-                    checked={notifications.messages}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, messages: checked })
-                    }
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="notif-friends" className="font-medium">
-                      Friend Requests
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified when you receive friend requests
-                    </p>
-                  </div>
-                  <Switch
-                    id="notif-friends"
-                    checked={notifications.friendRequests}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, friendRequests: checked })
-                    }
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="notif-groups" className="font-medium">
-                      Group Invites
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified when you're invited to a group
-                    </p>
-                  </div>
-                  <Switch
-                    id="notif-groups"
-                    checked={notifications.groupInvites}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, groupInvites: checked })
-                    }
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="notif-mentions" className="font-medium">
-                      Mentions
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified when someone mentions you
-                    </p>
-                  </div>
-                  <Switch
-                    id="notif-mentions"
-                    checked={notifications.mentions}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, mentions: checked })
-                    }
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="notif-sound" className="font-medium">
-                      Notification Sound
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Play sound when receiving notifications
-                    </p>
-                  </div>
-                  <Switch
-                    id="notif-sound"
-                    checked={notifications.sound}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, sound: checked })
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button onClick={handleSavePreferences} disabled={saving}>
-              {saving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}
-            </Button>
-          </div>
-        </TabsContent>
-
-        {/* ====================================================================== */}
-        {/* PRIVACY TAB */}
-        {/* ====================================================================== */}
-        <TabsContent value="privacy" className="space-y-4">
-          {/* Status Privacy Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="w-5 h-5" />
-                Activity Status
-              </CardTitle>
-              <CardDescription>
-                Control who can see your status
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="online-status" className="font-medium">
-                    Show Online Status
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Allow others to see when you're online
-                  </p>
-                </div>
-                <Switch
-                  id="online-status"
-                  checked={privacy.showOnlineStatus}
-                  onCheckedChange={(checked) =>
-                    setPrivacy({ ...privacy, showOnlineStatus: checked })
-                  }
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="read-receipts" className="font-medium">
-                    Read Receipts
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Allow others to see when you've read messages
-                  </p>
-                </div>
-                <Switch
-                  id="read-receipts"
-                  checked={privacy.showReadReceipts}
-                  onCheckedChange={(checked) =>
-                    setPrivacy({ ...privacy, showReadReceipts: checked })
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Contact Privacy Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="w-5 h-5" />
-                Contact Permissions
-              </CardTitle>
-              <CardDescription>
-                Control who can contact you
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <Label className="font-medium">Who can message you?</Label>
-                  <div className="mt-2 space-y-2">
-                    <div
-                      className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        privacy.messagePrivacy === 'everyone'
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-muted-foreground/50'
-                      }`}
-                      onClick={() => setPrivacy({ ...privacy, messagePrivacy: 'everyone' })}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        privacy.messagePrivacy === 'everyone' ? 'border-primary bg-primary' : 'border-muted-foreground'
-                      }`}>
-                        {privacy.messagePrivacy === 'everyone' && (
-                          <div className="w-2 h-2 rounded-full bg-white" />
-                        )}
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Email</Label>
+                        <p className="text-sm font-medium mt-1">{user?.email}</p>
                       </div>
-                      <span className="text-sm">Everyone</span>
                     </div>
-                    <div
-                      className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        privacy.messagePrivacy === 'friends'
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-muted-foreground/50'
-                      }`}
-                      onClick={() => setPrivacy({ ...privacy, messagePrivacy: 'friends' })}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        privacy.messagePrivacy === 'friends' ? 'border-primary bg-primary' : 'border-muted-foreground'
-                      }`}>
-                        {privacy.messagePrivacy === 'friends' && (
-                          <div className="w-2 h-2 rounded-full bg-white" />
-                        )}
-                      </div>
-                      <span className="text-sm">Friends Only</span>
-                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b">
+                <div>
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Username</Label>
+                        <p className="text-sm font-medium mt-1">{user?.username}</p>
                   </div>
                 </div>
 
-                <Separator />
-
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b">
                 <div>
-                  <Label className="font-medium">Who can add you to groups?</Label>
-                  <div className="mt-2 space-y-2">
-                    <div
-                      className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        privacy.groupPrivacy === 'everyone'
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-muted-foreground/50'
-                      }`}
-                      onClick={() => setPrivacy({ ...privacy, groupPrivacy: 'everyone' })}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        privacy.groupPrivacy === 'everyone' ? 'border-primary bg-primary' : 'border-muted-foreground'
-                      }`}>
-                        {privacy.groupPrivacy === 'everyone' && (
-                          <div className="w-2 h-2 rounded-full bg-white" />
-                        )}
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Student ID</Label>
+                        <p className="text-sm font-medium mt-1">{user?.mssv || 'Not set'}</p>
                       </div>
-                      <span className="text-sm">Everyone</span>
                     </div>
-                    <div
-                      className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        privacy.groupPrivacy === 'friends'
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-muted-foreground/50'
-                      }`}
-                      onClick={() => setPrivacy({ ...privacy, groupPrivacy: 'friends' })}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        privacy.groupPrivacy === 'friends' ? 'border-primary bg-primary' : 'border-muted-foreground'
-                      }`}>
-                        {privacy.groupPrivacy === 'friends' && (
-                          <div className="w-2 h-2 rounded-full bg-white" />
-                        )}
-                      </div>
-                      <span className="text-sm">Friends Only</span>
-                    </div>
-                    <div
-                      className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        privacy.groupPrivacy === 'none'
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-muted-foreground/50'
-                      }`}
-                      onClick={() => setPrivacy({ ...privacy, groupPrivacy: 'none' })}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        privacy.groupPrivacy === 'none' ? 'border-primary bg-primary' : 'border-muted-foreground'
-                      }`}>
-                        {privacy.groupPrivacy === 'none' && (
-                          <div className="w-2 h-2 rounded-full bg-white" />
-                        )}
-                      </div>
-                      <span className="text-sm">No One</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button onClick={handleSavePreferences} disabled={saving}>
-              {saving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}
-            </Button>
-          </div>
-        </TabsContent>
 
-        {/* ====================================================================== */}
-        {/* ACCOUNT TAB */}
-        {/* ====================================================================== */}
-        <TabsContent value="account" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserIcon className="w-5 h-5" />
-                Account
-              </CardTitle>
-              <CardDescription>
-                Manage your account
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <Label className="font-medium">Email</Label>
-                  <p className="text-sm text-gray-600 mt-1">{user?.email}</p>
-                </div>
+                    <Separator className="my-4" />
 
-                <Separator />
-
-                <div>
-                  <Label className="font-medium">Username</Label>
-                  <p className="text-sm text-gray-600 mt-1">{user?.username}</p>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <Label className="font-medium">Student ID</Label>
-                  <p className="text-sm text-gray-600 mt-1">{user?.mssv || 'Not set'}</p>
-                </div>
-
-                <Separator />
-
-                <div className="pt-4">
+                    <div className="space-y-3 pt-2">
                   <Button
                     variant="outline"
-                    className="w-full"
+                        className="w-full h-11 justify-start"
                     onClick={() => router.push('/profile')}
                   >
-                    Edit Profile
+                        <UserIcon className="w-4 h-4 mr-2" />
+                        View Full Profile
                   </Button>
-                </div>
 
-                <Separator />
-
-                <div className="pt-4">
                   <Button
                     variant="destructive"
-                    className="w-full"
+                        className="w-full h-11 justify-start"
                     onClick={handleLogout}
                   >
+                        <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
                   </Button>
-                </div>
 
-                <div className="pt-2">
                   <Button
                     variant="ghost"
-                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="w-full h-11 justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                   >
+                        <Trash2 className="w-4 h-4 mr-2" />
                     Delete Account
                   </Button>
                 </div>

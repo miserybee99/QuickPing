@@ -51,6 +51,38 @@ export function ThreadPanel({
     scrollToBottom();
   }, [replies]);
 
+  // Auto-focus input when thread panel opens or when loading completes
+  useEffect(() => {
+    // Wait for loading to complete before attempting focus
+    if (loading) return;
+    
+    // Use requestAnimationFrame and multiple attempts to ensure DOM is ready
+    requestAnimationFrame(() => {
+      const attemptFocus = (attempts: number) => {
+        if (attempts <= 0) return;
+        
+        setTimeout(() => {
+          if (inputRef.current) {
+            // Check if element is in DOM and not disabled
+            const element = inputRef.current;
+            if (element.offsetParent !== null && !element.disabled && document.activeElement !== element) {
+              element.focus();
+              console.log('✅ Thread input focused (attempt:', 4 - attempts, ')');
+            } else {
+              // Retry if element not ready or already focused
+              attemptFocus(attempts - 1);
+            }
+          } else {
+            // Retry if ref not set
+            attemptFocus(attempts - 1);
+          }
+        }, attempts === 3 ? 100 : attempts === 2 ? 300 : 500);
+      };
+      
+      attemptFocus(3); // Try 3 times with increasing delays
+    });
+  }, [parentMessage._id, loading]); // Re-focus when thread changes or loading completes
+
   const fetchThreadReplies = async () => {
     try {
       setLoading(true);

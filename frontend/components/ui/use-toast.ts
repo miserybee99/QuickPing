@@ -96,24 +96,25 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
+      // Clear any existing timeout for dismissed toast(s)
       if (toastId) {
-        addToRemoveQueue(toastId)
+        if (toastTimeouts.has(toastId)) {
+          clearTimeout(toastTimeouts.get(toastId)!)
+          toastTimeouts.delete(toastId)
+        }
+        // Immediately remove the toast (don't wait for timeout)
+        return {
+          ...state,
+          toasts: state.toasts.filter((t) => t.id !== toastId),
+        }
       } else {
-        state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId === undefined
-            ? {
-                ...t,
-                open: false,
-              }
-            : t
-        ),
+        // For all toasts, clear all timeouts and remove all
+        toastTimeouts.forEach((timeout) => clearTimeout(timeout))
+        toastTimeouts.clear()
+        return {
+          ...state,
+          toasts: [],
+        }
       }
     }
     case "REMOVE_TOAST":

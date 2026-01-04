@@ -69,7 +69,7 @@ async function downloadFile(fileInfo: FileInfo): Promise<void> {
     document.body.removeChild(a);
   } catch (error) {
     console.error('Download error:', error);
-    alert('Không thể tải file. Vui lòng thử lại.');
+    alert('Unable to download file. Please try again.');
   }
 }
 
@@ -243,36 +243,24 @@ function VideoMessage({
         </div>
       )}
       
-      {/* File info */}
-      <div className="mt-1 flex items-center gap-2 text-xs">
-        <FileTypeIcon mimeType={fileInfo.mime_type} size="sm" />
-        <span className={cn(
-          'truncate flex-1',
-          isOwnMessage ? 'text-white/80' : 'text-gray-600'
-        )}>
-          {fileInfo.filename}
-        </span>
-        <span className={cn(
-          isOwnMessage ? 'text-white/60' : 'text-gray-400'
-        )}>
-          {formatFileSize(fileInfo.size)}
-        </span>
+      {/* Download button when video is playing - positioned as overlay */}
+      {isPlaying && (
         <button
           onClick={(e) => {
             e.stopPropagation();
             downloadFile(fileInfo);
           }}
           className={cn(
-            'p-1 rounded transition-colors inline-flex items-center',
+            'absolute top-2 right-2 p-2 rounded-full transition-colors inline-flex items-center z-10',
             isOwnMessage
-              ? 'hover:bg-white/10 text-white/80'
-              : 'hover:bg-gray-200 text-gray-600'
+              ? 'bg-white/90 hover:bg-white text-gray-900'
+              : 'bg-gray-900/70 hover:bg-gray-900 text-white'
           )}
           title="Download"
         >
-          <Download className="w-3 h-3" />
+          <Download className="w-4 h-4" />
         </button>
-      </div>
+      )}
     </motion.div>
   );
 }
@@ -336,9 +324,8 @@ function DocumentMessage({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={cn(
-        'flex items-center gap-3 p-3 rounded-lg min-w-[200px] max-w-[280px]',
-        isOwnMessage ? 'bg-white/10' : 'bg-gray-100',
-        (canPreview && onPreview) && 'cursor-pointer hover:bg-opacity-80 transition-colors'
+        'flex items-center gap-3 min-w-[200px] max-w-[280px]',
+        (canPreview && onPreview) && 'cursor-pointer transition-colors'
       )}
       onClick={() => canPreview && onPreview?.(fileInfo)}
     >

@@ -44,7 +44,7 @@ const generateOTPEmailHTML = (username, otp) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Xác thực Email - QuickPing</title>
+  <title>Email Verification - QuickPing</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
              background-color: #f5f5f5; margin: 0; padding: 20px; line-height: 1.6;">
@@ -58,12 +58,12 @@ const generateOTPEmailHTML = (username, otp) => {
     
     <!-- Greeting -->
     <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
-      Xin chào <strong>${username}</strong>! 👋
+      Hello <strong>${username}</strong>! 👋
     </p>
     
     <!-- Message -->
     <p style="font-size: 16px; color: #666; margin-bottom: 24px;">
-      Cảm ơn bạn đã đăng ký tài khoản QuickPing. Đây là mã xác thực của bạn:
+      Thank you for registering with QuickPing. Here is your verification code:
     </p>
     
     <!-- OTP Box -->
@@ -77,21 +77,21 @@ const generateOTPEmailHTML = (username, otp) => {
     
     <!-- Expiry Notice -->
     <p style="font-size: 14px; color: #888; text-align: center; margin-bottom: 24px;">
-      ⏱️ Mã này sẽ hết hạn sau <strong>10 phút</strong>
+      ⏱️ This code will expire in <strong>10 minutes</strong>
     </p>
     
     <!-- Warning -->
     <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
       <p style="font-size: 14px; color: #92400e; margin: 0;">
-        ⚠️ Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.
-        Không chia sẻ mã này với bất kỳ ai.
+        ⚠️ If you did not request this code, please ignore this email.
+        Do not share this code with anyone.
       </p>
     </div>
     
     <!-- Footer -->
     <div style="border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
       <p style="font-size: 12px; color: #999; margin: 0;">
-        © 2024 QuickPing. Kết nối mọi người.
+        © 2024 QuickPing. Connecting people.
       </p>
     </div>
   </div>
@@ -103,15 +103,15 @@ const generateOTPEmailHTML = (username, otp) => {
 // Generate plain text version
 const generateOTPEmailText = (username, otp) => {
   return `
-Xin chào ${username}!
+Hello ${username}!
 
-Cảm ơn bạn đã đăng ký tài khoản QuickPing.
+Thank you for registering with QuickPing.
 
-Mã xác thực của bạn là: ${otp}
+Your verification code is: ${otp}
 
-Mã này sẽ hết hạn sau 10 phút.
+This code will expire in 10 minutes.
 
-Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.
+If you did not request this code, please ignore this email.
 
 - QuickPing Team
   `.trim();
@@ -126,7 +126,7 @@ Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.
  */
 export const sendOTPEmail = async (email, username, otp) => {
   try {
-    const subject = '🔐 [QuickPing] Mã xác thực email của bạn';
+    const subject = '🔐 [QuickPing] Your Email Verification Code';
     const htmlContent = generateOTPEmailHTML(username, otp);
     const textContent = generateOTPEmailText(username, otp);
 
@@ -209,7 +209,7 @@ const generatePasswordResetOTPEmailHTML = (username, otp) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đặt Lại Mật Khẩu - QuickPing</title>
+  <title>Reset Password - QuickPing</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
              background-color: #f5f5f5; margin: 0; padding: 20px; line-height: 1.6;">
@@ -223,12 +223,12 @@ const generatePasswordResetOTPEmailHTML = (username, otp) => {
     
     <!-- Greeting -->
     <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
-      Xin chào <strong>${username}</strong>! 👋
+      Hello <strong>${username}</strong>! 👋
     </p>
     
     <!-- Message -->
     <p style="font-size: 16px; color: #666; margin-bottom: 24px;">
-      Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản QuickPing. Đây là mã xác thực của bạn:
+      You have requested to reset your password for your QuickPing account. Here is your verification code:
     </p>
     
     <!-- OTP Box -->
@@ -242,21 +242,21 @@ const generatePasswordResetOTPEmailHTML = (username, otp) => {
     
     <!-- Expiry Notice -->
     <p style="font-size: 14px; color: #888; text-align: center; margin-bottom: 24px;">
-      ⏱️ Mã này sẽ hết hạn sau <strong>10 phút</strong>
+      ⏱️ This code will expire in <strong>10 minutes</strong>
     </p>
     
     <!-- Warning -->
     <div style="background: #fee2e2; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
       <p style="font-size: 14px; color: #991b1b; margin: 0;">
-        ⚠️ Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này và không chia sẻ mã này với bất kỳ ai.
-        Mật khẩu của bạn sẽ không thay đổi nếu bạn không nhập mã này.
+        ⚠️ If you did not request a password reset, please ignore this email and do not share this code with anyone.
+        Your password will not change if you do not enter this code.
       </p>
     </div>
     
     <!-- Footer -->
     <div style="border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
       <p style="font-size: 12px; color: #999; margin: 0;">
-        © 2024 QuickPing. Kết nối mọi người.
+        © 2024 QuickPing. Connecting people.
       </p>
     </div>
   </div>
@@ -268,15 +268,15 @@ const generatePasswordResetOTPEmailHTML = (username, otp) => {
 // Generate plain text version for password reset
 const generatePasswordResetOTPEmailText = (username, otp) => {
   return `
-Xin chào ${username}!
+Hello ${username}!
 
-Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản QuickPing.
+You have requested to reset your password for your QuickPing account.
 
-Mã xác thực của bạn là: ${otp}
+Your verification code is: ${otp}
 
-Mã này sẽ hết hạn sau 10 phút.
+This code will expire in 10 minutes.
 
-Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
+If you did not request a password reset, please ignore this email.
 
 - QuickPing Team
   `.trim();
@@ -291,7 +291,7 @@ Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua emai
  */
 export const sendPasswordResetOTPEmail = async (email, username, otp) => {
   try {
-    const subject = '🔐 [QuickPing] Mã xác thực đặt lại mật khẩu';
+    const subject = '🔐 [QuickPing] Password Reset Verification Code';
     const htmlContent = generatePasswordResetOTPEmailHTML(username, otp);
     const textContent = generatePasswordResetOTPEmailText(username, otp);
 

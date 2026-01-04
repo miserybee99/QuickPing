@@ -198,26 +198,73 @@ router.put('/:conversationId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    // Check if user is admin or moderator
+    // Check if user is admin (only admins can edit group info)
     const participant = conversation.participants.find(
       p => p.user_id.toString() === req.user._id.toString()
     );
 
-    if (!participant || !['admin', 'moderator'].includes(participant.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+    if (!participant || participant.role !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can edit group information' });
     }
 
     const { name, description, avatar_url, participants } = req.body;
+
+    // Store old participants to detect changes
+    const oldParticipants = conversation.participants.map(p => p.user_id.toString());
+    const addedUserIds = [];
 
     if (name) conversation.name = name;
     if (description !== undefined) conversation.description = description;
     if (avatar_url !== undefined) conversation.avatar_url = avatar_url;
     if (participants) {
+      // Detect newly added participants
+      const newParticipantIds = participants.map((p) => {
+        const userId = p.user_id?._id || p.user_id || p;
+        return userId ? userId.toString() : null;
+      }).filter(id => id !== null);
+      addedUserIds.push(...newParticipantIds.filter(id => !oldParticipants.includes(id)));
+      
       conversation.participants = participants;
     }
 
     await conversation.save();
-    await conversation.populate('participants.user_id', 'username avatar_url');
+    await conversation.populate('participants.user_id', 'username avatar_url is_online last_seen role');
+    await conversation.populate('created_by', 'username avatar_url');
+
+    // Emit socket event if participants were added
+    const io = req.app.get('io');
+    console.log('🔍 Checking io for participant_added:', { 
+      hasIo: !!io, 
+      addedUserIdsCount: addedUserIds.length,
+      conversationId: req.params.conversationId.toString()
+    });
+    
+    if (io && addedUserIds.length > 0) {
+      const conversationIdStr = req.params.conversationId.toString();
+      
+      // Broadcast to conversation room for realtime updates
+      io.to(`conversation_${conversationIdStr}`).emit('conversation_updated', {
+        conversation: conversation.toObject(),
+        type: 'participant_added',
+        added_user_ids: addedUserIds
+      });
+      
+      // Also notify the newly added users directly (if they're connected)
+      addedUserIds.forEach(userId => {
+        io.to(`user_${userId}`).emit('conversation_updated', {
+          conversation: conversation.toObject(),
+          type: 'participant_added',
+          added_user_ids: [userId]
+        });
+      });
+      
+      console.log(`📤 Broadcasted participant addition: users ${addedUserIds.join(', ')} to conversation ${conversationIdStr}`);
+    } else {
+      console.warn('⚠️ Cannot emit participant_added event:', { 
+        hasIo: !!io, 
+        addedUserIdsCount: addedUserIds.length 
+      });
+    }
 
     res.json({ conversation });
   } catch (error) {
@@ -344,16 +391,36 @@ router.put('/:conversationId/participants/:userId/role', authenticate, [
 
     // Emit socket event to notify all participants about the role change
     const io = req.app.get('io');
+    console.log('🔍 Checking io for role_change:', { 
+      hasIo: !!io, 
+      conversationId: conversationId.toString(),
+      userId: userId.toString(),
+      newRole: role
+    });
+    
     if (io) {
-      // Emit to all participants in the conversation
-      conversation.participants.forEach(p => {
-        io.to(`user_${p.user_id._id}`).emit('conversation_updated', {
-          conversation,
-          type: 'role_change',
-          userId: userId,
-          newRole: role
-        });
+      const conversationIdStr = conversationId.toString();
+      const userIdStr = userId.toString();
+      
+      // Broadcast to conversation room for realtime updates (same pattern as remove participant)
+      io.to(`conversation_${conversationIdStr}`).emit('conversation_updated', {
+        conversation: conversation.toObject(),
+        type: 'role_change',
+        user_id: userIdStr,
+        new_role: role
       });
+      
+      // Also notify the user whose role changed directly (if they're connected)
+      io.to(`user_${userIdStr}`).emit('conversation_updated', {
+        conversation: conversation.toObject(),
+        type: 'role_change',
+        user_id: userIdStr,
+        new_role: role
+      });
+      
+      console.log(`📤 Broadcasted role change: user ${userIdStr} to ${role} in conversation ${conversationIdStr}`);
+    } else {
+      console.warn('⚠️ Cannot emit role_change event: io is not available');
     }
 
     res.json({ 
@@ -418,6 +485,42 @@ router.delete('/:conversationId/participants/:userId', authenticate, async (req,
     // Populate and return updated conversation
     await conversation.populate('participants.user_id', 'username avatar_url is_online last_seen role');
     await conversation.populate('created_by', 'username avatar_url');
+
+    // Emit socket event to notify all participants about the participant removal
+    const io = req.app.get('io');
+    console.log('🔍 Checking io for participant_removed:', { 
+      hasIo: !!io, 
+      conversationId: conversationId.toString(),
+      removedUserId: userId.toString(),
+      isSelf: isSelf
+    });
+    
+    if (io) {
+      const conversationIdStr = conversationId.toString();
+      const removedUserIdStr = userId.toString();
+      
+      // Broadcast to conversation room for realtime updates
+      io.to(`conversation_${conversationIdStr}`).emit('conversation_updated', {
+        conversation: conversation.toObject(),
+        type: 'participant_removed',
+        removed_user_id: removedUserIdStr,
+        is_self: isSelf
+      });
+      
+      // Also notify the removed user directly (if they're still connected)
+      if (!isSelf) {
+        io.to(`user_${removedUserIdStr}`).emit('conversation_updated', {
+          conversation: conversation.toObject(),
+          type: 'participant_removed',
+          removed_user_id: removedUserIdStr,
+          is_self: false
+        });
+      }
+      
+      console.log(`📤 Broadcasted participant removal: user ${removedUserIdStr} from conversation ${conversationIdStr}`);
+    } else {
+      console.warn('⚠️ Cannot emit participant_removed event: io is not available');
+    }
 
     res.json({ 
       conversation,
