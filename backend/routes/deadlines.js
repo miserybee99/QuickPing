@@ -334,4 +334,74 @@ router.delete('/:deadlineId', authenticate, [
     }
 });
 
+/**
+ * POST /api/deadlines/test-reminder
+ * Test endpoint to trigger deadline reminder check (development only)
+ */
+router.post('/test-reminder', authenticate, async (req, res) => {
+    try {
+        // Only allow in development
+        if (process.env.NODE_ENV === 'production') {
+            return res.status(403).json({ error: 'Not available in production' });
+        }
+
+        const { checkAndSendDeadlineReminders } = await import('../services/deadline-reminder.service.js');
+        
+        console.log('🧪 Manual trigger of deadline reminder check...');
+        await checkAndSendDeadlineReminders();
+        
+        res.json({ message: 'Deadline reminder check completed', timestamp: new Date().toISOString() });
+    } catch (error) {
+        console.error('Test reminder error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+/**
+ * GET /api/deadlines/debug
+ * Debug endpoint to see all deadlines and their reminder status
+ */
+router.get('/debug', authenticate, async (req, res) => {
+    try {
+        // Only allow in development
+        if (process.env.NODE_ENV === 'production') {
+            return res.status(403).json({ error: 'Not available in production' });
+        }
+
+        const now = new Date();
+        const minTime = new Date(now.getTime() + 11 * 60 * 60 * 1000);
+        const maxTime = new Date(now.getTime() + 13 * 60 * 60 * 1000);
+
+        const allDeadlines = await Deadline.find({})
+            .populate('conversation_id', 'name')
+            .populate('created_by', 'username email')
+            .sort({ due_date: 1 });
+
+        const debugInfo = {
+            current_time: now.toISOString(),
+            reminder_window: {
+                start: minTime.toISOString(),
+                end: maxTime.toISOString()
+            },
+            deadlines: allDeadlines.map(d => ({
+                _id: d._id,
+                title: d.title,
+                due_date: d.due_date,
+                reminder_sent: d.reminder_sent,
+                conversation: d.conversation_id?.name,
+                created_by: d.created_by?.username,
+                hours_until_due: Math.round((new Date(d.due_date) - now) / (1000 * 60 * 60)),
+                in_reminder_window: d.due_date >= minTime && d.due_date <= maxTime,
+                should_remind: (d.due_date >= minTime && d.due_date <= maxTime) && 
+                              (!d.reminder_sent || d.reminder_sent === false)
+            }))
+        };
+
+        res.json(debugInfo);
+    } catch (error) {
+        console.error('Debug deadlines error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 export default router;

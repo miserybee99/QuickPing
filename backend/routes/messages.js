@@ -90,9 +90,122 @@ router.get('/thread/:threadId', authenticate, async (req, res) => {
       .sort({ created_at: 1 })
       .limit(parseInt(limit));
 
-    res.json({ messages });
+    res.json({ messages, thread_name: parentMessage.thread_name });
   } catch (error) {
     console.error('Get thread error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get all threads for a conversation
+router.get('/conversation/:conversationId/threads', authenticate, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+
+    // Check if user is participant
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    const isParticipant = conversation.participants.some(
+      p => p.user_id.toString() === req.user._id.toString()
+    );
+
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get all messages that are thread parents (have thread_id field but are themselves not replies)
+    const threads = await Message.find({
+      conversation_id: conversationId,
+      thread_id: { $exists: false } // Parent messages only
+    })
+      .populate('sender_id', 'username avatar_url')
+      .populate({
+        path: 'reply_to',
+        populate: { path: 'sender_id', select: 'username avatar_url' }
+      })
+      .sort({ updated_at: -1 });
+
+    // Filter to only messages that have replies (actual threads)
+    const threadsWithReplies = await Promise.all(
+      threads.map(async (msg) => {
+        const replyCount = await Message.countDocuments({ thread_id: msg._id });
+        if (replyCount > 0) {
+          return {
+            _id: msg._id,
+            thread_name: msg.thread_name,
+            content: msg.content,
+            sender_id: msg.sender_id,
+            reply_count: replyCount,
+            created_at: msg.created_at,
+            updated_at: msg.updated_at,
+          };
+        }
+        return null;
+      })
+    );
+
+    const validThreads = threadsWithReplies.filter(t => t !== null);
+
+    res.json({ threads: validThreads });
+  } catch (error) {
+    console.error('Get threads error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update thread name
+router.put('/thread/:threadId/name', authenticate, [
+  body('thread_name').trim().isLength({ min: 1, max: 100 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { threadId } = req.params;
+    const { thread_name } = req.body;
+
+    // Find the parent message (thread)
+    const parentMessage = await Message.findById(threadId);
+    if (!parentMessage) {
+      return res.status(404).json({ error: 'Thread not found' });
+    }
+
+    // Check if user is participant in the conversation
+    const conversation = await Conversation.findById(parentMessage.conversation_id);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    const isParticipant = conversation.participants.some(
+      p => p.user_id.toString() === req.user._id.toString()
+    );
+
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Update thread name
+    parentMessage.thread_name = thread_name;
+    await parentMessage.save();
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`conversation_${conversation._id}`).emit('thread_name_updated', {
+        thread_id: threadId,
+        thread_name: thread_name,
+        conversation_id: conversation._id.toString()
+      });
+    }
+
+    res.json({ message: parentMessage });
+  } catch (error) {
+    console.error('Update thread name error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -145,7 +258,10 @@ router.post('/', authenticate, [
     // Populate before sending
     await message.populate('sender_id', 'username avatar_url');
     if (reply_to) {
-      await message.populate('reply_to');
+      await message.populate({
+        path: 'reply_to',
+        populate: { path: 'sender_id', select: 'username avatar_url' }
+      });
     }
 
     // Emit socket event for realtime update

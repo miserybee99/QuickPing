@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, Send, MessageCircle, Smile } from 'lucide-react';
+import { X, Send, MessageCircle, Smile, Edit2, Check } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -39,6 +39,9 @@ export function ThreadPanel({
   const [replyContent, setReplyContent] = useState('');
   const [sending, setSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [threadName, setThreadName] = useState<string>('');
+  const [isEditingThreadName, setIsEditingThreadName] = useState(false);
+  const [threadNameInput, setThreadNameInput] = useState('');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,13 +89,74 @@ export function ThreadPanel({
   const fetchThreadReplies = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.messages.getThreadReplies(parentMessage._id);
-      const threadReplies = (response as any).data?.messages || (response as any).messages || [];
-      setReplies(threadReplies);
+      const threadId = typeof parentMessage._id === 'string' 
+        ? parentMessage._id 
+        : (parentMessage._id as any)?._id?.toString() || parentMessage._id?.toString();
+      
+      console.log('🔍 Fetching thread replies for threadId:', threadId, 'parentMessage:', parentMessage);
+      
+      const response = await apiClient.messages.getThreadReplies(threadId);
+      console.log('📥 Thread replies response:', response);
+      
+      // Handle different response formats
+      let threadReplies: Message[] = [];
+      if ((response as any).data?.messages) {
+        threadReplies = (response as any).data.messages;
+      } else if ((response as any).messages) {
+        threadReplies = (response as any).messages;
+      } else if (Array.isArray((response as any).data)) {
+        threadReplies = (response as any).data;
+      } else if (Array.isArray(response)) {
+        threadReplies = response as Message[];
+      }
+      
+      const fetchedThreadName = (response as any).data?.thread_name || parentMessage.thread_name || '';
+      
+      console.log('📋 Parsed thread replies:', threadReplies.length, 'messages');
+      
+      // Populate sender_id username from users Map if missing
+      const populatedReplies = threadReplies.map((reply: Message) => {
+        if (reply.sender_id?._id && !reply.sender_id?.username) {
+          const userFromMap = users.get(reply.sender_id._id.toString());
+          if (userFromMap) {
+            return {
+              ...reply,
+              sender_id: {
+                ...reply.sender_id,
+                username: userFromMap.username,
+                avatar_url: userFromMap.avatar_url || reply.sender_id.avatar_url,
+              }
+            };
+          }
+        }
+        return reply;
+      });
+      
+      console.log('✅ Setting replies:', populatedReplies.length, 'messages');
+      setReplies(populatedReplies);
+      setThreadName(fetchedThreadName);
     } catch (error) {
-      console.error('Error fetching thread replies:', error);
+      console.error('❌ Error fetching thread replies:', error);
+      setReplies([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateThreadName = async () => {
+    if (!threadNameInput.trim()) {
+      setIsEditingThreadName(false);
+      setThreadNameInput('');
+      return;
+    }
+
+    try {
+      await apiClient.messages.updateThreadName(parentMessage._id, threadNameInput.trim());
+      setThreadName(threadNameInput.trim());
+      setIsEditingThreadName(false);
+      setThreadNameInput('');
+    } catch (error) {
+      console.error('Error updating thread name:', error);
     }
   };
 
@@ -152,29 +216,86 @@ export function ThreadPanel({
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '100%', opacity: 0 }}
       transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="absolute inset-y-0 right-0 w-[400px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-20"
+      className="absolute inset-y-0 right-0 w-[400px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex flex-col shadow-xl z-20"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-[#615EF0]" />
-          <h3 className="font-semibold text-gray-900">Thread</h3>
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-            {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
-          </span>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex-1 flex items-center gap-2 min-w-0">
+          <MessageCircle className="h-5 w-5 text-[#615EF0] flex-shrink-0" />
+          {isEditingThreadName ? (
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <input
+                type="text"
+                value={threadNameInput}
+                onChange={(e) => setThreadNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleUpdateThreadName();
+                  if (e.key === 'Escape') {
+                    setIsEditingThreadName(false);
+                    setThreadNameInput('');
+                  }
+                }}
+                autoFocus
+                className="flex-1 px-2 py-1 text-sm font-semibold bg-transparent border border-[#615EF0] rounded text-gray-900 dark:text-gray-100 outline-none"
+                placeholder="Thread name..."
+                maxLength={100}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleUpdateThreadName}
+                className="h-6 w-6 text-green-600 hover:text-green-700"
+              >
+                <Check className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsEditingThreadName(false);
+                  setThreadNameInput('');
+                }}
+                className="h-6 w-6 text-gray-600 hover:text-gray-700"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                  {threadName || 'Thread'}
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setIsEditingThreadName(true);
+                    setThreadNameInput(threadName);
+                  }}
+                  className="h-6 w-6 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full flex-shrink-0">
+                {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+              </span>
+            </>
+          )}
         </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="h-8 w-8 rounded-full"
+          className="h-8 w-8 rounded-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
         >
           <X className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Parent Message */}
-      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div className="flex gap-3">
           <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarImage src={parentMessage.sender_id?.avatar_url} />
@@ -185,14 +306,16 @@ export function ThreadPanel({
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-gray-900">
-                {parentMessage.sender_id?.username || 'Unknown'}
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {parentMessage.sender_id?.username || 
+                 (parentMessage.sender_id?._id ? users.get(parentMessage.sender_id._id.toString())?.username : null) || 
+                 'Unknown'}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 {formatTime(parentMessage.created_at)}
               </span>
             </div>
-            <p className="text-sm text-gray-700 mt-1 break-words">
+            <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 break-words">
               {parentMessage.content}
             </p>
             
@@ -217,9 +340,9 @@ export function ThreadPanel({
           </div>
         ) : replies.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <MessageCircle className="h-12 w-12 text-gray-300 mb-3" />
-            <p className="text-sm text-gray-500">No replies yet</p>
-            <p className="text-xs text-gray-400 mt-1">Be the first to reply!</p>
+            <MessageCircle className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">No replies yet</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Be the first to reply!</p>
           </div>
         ) : (
           <div className="py-4 space-y-4">
@@ -244,12 +367,14 @@ export function ThreadPanel({
                     </AvatarFallback>
                   </Avatar>
                   
-                  <div className={cn('flex flex-col max-w-[280px]', isOwn ? 'items-end' : 'items-start')}>
+                    <div className={cn('flex flex-col max-w-[280px]', isOwn ? 'items-end' : 'items-start')}>
                     <div className={cn('flex items-center gap-2 mb-1', isOwn && 'flex-row-reverse')}>
-                      <span className="text-xs font-medium text-gray-700">
-                        {reply.sender_id?.username || 'Unknown'}
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                        {reply.sender_id?.username || 
+                         (reply.sender_id?._id ? users.get(reply.sender_id._id.toString())?.username : null) || 
+                         'Unknown'}
                       </span>
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500">
                         {formatTime(reply.created_at)}
                       </span>
                     </div>
@@ -259,14 +384,14 @@ export function ThreadPanel({
                         'px-3 py-2 rounded-xl text-sm break-words',
                         isOwn
                           ? 'bg-[#615EF0] text-white'
-                          : 'bg-gray-100 text-gray-900'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                       )}
                     >
                       {reply.content}
                       {reply.is_edited && (
                         <span className={cn(
                           'text-[10px] ml-1 italic',
-                          isOwn ? 'text-white/70' : 'text-gray-500'
+                          isOwn ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'
                         )}>
                           (edited)
                         </span>
@@ -295,9 +420,9 @@ export function ThreadPanel({
       {/* Reply Input */}
       <form
         onSubmit={handleSendReply}
-        className="px-4 py-3 border-t border-gray-200 bg-white"
+        className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
       >
-        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
           <input
             ref={inputRef}
             type="text"
@@ -305,7 +430,7 @@ export function ThreadPanel({
             value={replyContent}
             onChange={(e) => setReplyContent(e.target.value)}
             disabled={sending}
-            className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 placeholder:text-gray-400"
+            className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
           />
           
           <div className="relative">
@@ -314,7 +439,7 @@ export function ThreadPanel({
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className={cn(
                 'p-1 rounded-full transition-colors',
-                showEmojiPicker ? 'text-[#615EF0]' : 'text-gray-400 hover:text-gray-600'
+                showEmojiPicker ? 'text-[#615EF0]' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'
               )}
               disabled={sending}
             >
@@ -335,7 +460,7 @@ export function ThreadPanel({
               'p-1 rounded-full transition-colors',
               replyContent.trim()
                 ? 'text-[#615EF0] hover:text-[#615EF0]/80'
-                : 'text-gray-300'
+                : 'text-gray-300 dark:text-gray-600'
             )}
           >
             <Send className="h-4 w-4" />

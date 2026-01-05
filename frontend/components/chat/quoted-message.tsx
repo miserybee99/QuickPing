@@ -11,6 +11,7 @@ interface QuotedMessageProps {
   onClick?: () => void;
   isOwnMessage?: boolean;
   showInBubble?: boolean;
+  usersMap?: Map<string, { _id: string; username: string; avatar_url?: string }>;
 }
 
 export function QuotedMessage({
@@ -18,9 +19,25 @@ export function QuotedMessage({
   onClick,
   isOwnMessage = false,
   showInBubble = false,
+  usersMap,
 }: QuotedMessageProps) {
-  const senderName = message.sender_id?.username || 'Unknown';
-  const avatarUrl = message.sender_id?.avatar_url;
+  // Get sender name from message or usersMap
+  const getSenderName = (): string => {
+    if (message.sender_id?.username) {
+      return message.sender_id.username;
+    }
+    if (message.sender_id?._id && usersMap) {
+      const user = usersMap.get(message.sender_id._id.toString());
+      if (user?.username) {
+        return user.username;
+      }
+    }
+    return 'Unknown';
+  };
+  
+  const senderName = getSenderName();
+  const avatarUrl = message.sender_id?.avatar_url || 
+    (message.sender_id?._id && usersMap?.get(message.sender_id._id.toString())?.avatar_url);
 
   // Get content preview (max 2 lines / ~100 chars)
   const getContentPreview = (): string => {

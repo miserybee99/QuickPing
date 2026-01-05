@@ -29,6 +29,13 @@ const deadlineSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  reminder_sent: {
+    type: Boolean,
+    default: false
+  },
+  reminder_sent_at: {
+    type: Date
+  },
   created_at: {
     type: Date,
     default: Date.now

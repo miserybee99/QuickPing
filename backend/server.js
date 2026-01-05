@@ -17,6 +17,7 @@ import aiRoutes from './routes/ai.js';
 import deadlineRoutes from './routes/deadlines.js';
 import { setupSocketIO } from './socket/socket.js';
 import { authenticateSocket } from './middleware/auth.js';
+import { startDeadlineReminderScheduler } from './services/deadline-reminder.service.js';
 
 // ES Module __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -103,6 +104,9 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  
+  // Start deadline reminder scheduler
+  startDeadlineReminderScheduler();
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`❌ Port ${PORT} is already in use`);

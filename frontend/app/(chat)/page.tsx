@@ -14,6 +14,7 @@ function ChatContent() {
   const { user, isClient } = useUser();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [openThreadHandler, setOpenThreadHandler] = useState<((messageId: string) => void) | null>(null);
 
   useEffect(() => {
     // Wait for client-side hydration to complete
@@ -70,6 +71,13 @@ function ChatContent() {
         <ChatPanel 
           conversationId={selectedConversationId}
           onConversationLoaded={setSelectedConversation}
+          onOpenThreadRequest={() => {
+            // Handler will be set via window object
+            setOpenThreadHandler(() => (messageId: string) => {
+              const handler = (window as any).__openThreadHandler;
+              if (handler) handler(messageId);
+            });
+          }}
         />
       </div>
       
@@ -77,6 +85,10 @@ function ChatContent() {
       <DirectoryPanel 
         conversation={selectedConversation}
         onConversationUpdated={setSelectedConversation}
+        onOpenThread={(messageId) => {
+          const handler = (window as any).__openThreadHandler;
+          if (handler) handler(messageId);
+        }}
       />
     </div>
   );

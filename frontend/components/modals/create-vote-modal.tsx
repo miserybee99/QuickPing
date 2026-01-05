@@ -63,6 +63,7 @@ export function CreateVoteModal({
   const [expiryOption, setExpiryOption] = useState('24h');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ question?: string; options?: string }>({});
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const resetForm = () => {
     setQuestion('');
@@ -71,6 +72,7 @@ export function CreateVoteModal({
     setAnonymous(false);
     setExpiryOption('24h');
     setErrors({});
+    setApiError(null);
   };
 
   const handleClose = () => {
@@ -130,6 +132,7 @@ export function CreateVoteModal({
     if (!validateForm()) return;
 
     setIsSubmitting(true);
+    setApiError(null);
     try {
       const filledOptions = options.filter((opt) => opt.trim());
       await onCreateVote({
@@ -142,8 +145,91 @@ export function CreateVoteModal({
         expires_at: calculateExpiryDate(),
       });
       handleClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create vote:', error);
+      // Log full error details for debugging
+      console.error('Full vote error details:', {
+        message: error?.message,
+        name: error?.name,
+        response: error?.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          dataType: typeof error.response.data,
+          dataStringified: JSON.stringify(error.response.data),
+          headers: error.response.headers
+        } : 'No response object',
+        request: error?.request ? 'Request object exists' : 'No request object',
+        config: error?.config ? {
+          url: error.config.url,
+          method: error.config.method,
+          baseURL: error.config.baseURL
+        } : 'No config'
+      });
+      
+      // Extract error message from API response - handle multiple formats
+      let errorMessage = 'Failed to create vote. Please try again.';
+      
+      // Check if we have response data
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        
+        // Log what we actually received
+        console.log('Error data received:', {
+          errorData,
+          isObject: typeof errorData === 'object',
+          isArray: Array.isArray(errorData),
+          keys: typeof errorData === 'object' ? Object.keys(errorData) : [],
+          stringified: JSON.stringify(errorData)
+        });
+        
+        // Handle validation errors with details array
+        if (errorData.details && Array.isArray(errorData.details) && errorData.details.length > 0) {
+          const firstError = errorData.details[0];
+          errorMessage = firstError.message || errorData.error || errorMessage;
+        } 
+        // Handle simple error string
+        else if (errorData.error) {
+          errorMessage = typeof errorData.error === 'string' 
+            ? errorData.error 
+            : JSON.stringify(errorData.error);
+        }
+        // Handle errors array format (express-validator format)
+        else if (Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          const firstError = errorData.errors[0];
+          errorMessage = firstError.msg || firstError.message || errorMessage;
+        }
+        // If data is an object but empty or has unexpected structure
+        else if (typeof errorData === 'object' && errorData !== null && Object.keys(errorData).length === 0) {
+          // Try to get error from status text or status code
+          if (error.response.statusText) {
+            errorMessage = `Error: ${error.response.statusText} (Status: ${error.response.status})`;
+          } else {
+            errorMessage = `Server returned empty error (Status: ${error.response.status}). Please check server logs.`;
+          }
+        }
+      } 
+      // Fallback to error message if no response data
+      else if (error?.message) {
+        errorMessage = error.message;
+      }
+      // Network error
+      else if (error?.request && !error?.response) {
+        errorMessage = 'Network error: Could not reach server. Please check your connection.';
+      }
+      // Status code based error (when response exists but no data)
+      else if (error?.response?.status) {
+        const statusMessages: Record<number, string> = {
+          400: 'Invalid request. Please check your input.',
+          401: 'Unauthorized. Please log in again.',
+          403: 'You do not have permission to perform this action.',
+          404: 'Resource not found.',
+          500: 'Server error. Please try again later.'
+        };
+        errorMessage = statusMessages[error.response.status] || `Request failed with status ${error.response.status}.`;
+      }
+      
+      setApiError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -311,6 +397,21 @@ export function CreateVoteModal({
               </Select>
             </div>
           </div>
+
+          {/* API Error Display */}
+          {apiError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2"
+            >
+              <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">Error</p>
+                <p className="text-xs text-red-600 mt-0.5">{apiError}</p>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Footer */}

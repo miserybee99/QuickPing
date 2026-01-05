@@ -62,6 +62,11 @@ const messageSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Message'
   },
+  thread_name: {
+    type: String,
+    trim: true,
+    maxlength: 100
+  },
   is_edited: {
     type: Boolean,
     default: false

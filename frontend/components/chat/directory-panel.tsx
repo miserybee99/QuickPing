@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, FileText, Image, FileSpreadsheet, File, MoreHorizontal, UserPlus, LogOut, Settings, Loader2, ChevronDown, Calendar } from 'lucide-react';
+import { Download, FileText, Image, FileSpreadsheet, File, MoreHorizontal, UserPlus, LogOut, Settings, Loader2, ChevronDown, Calendar, MessageCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
@@ -61,9 +61,10 @@ async function downloadFileFromUrl(file: FileAttachment): Promise<void> {
 interface DirectoryPanelProps {
   conversation?: Conversation | null;
   onConversationUpdated?: (conversation: Conversation) => void;
+  onOpenThread?: (messageId: string) => void;
 }
 
-export function DirectoryPanel({ conversation, onConversationUpdated }: DirectoryPanelProps) {
+export function DirectoryPanel({ conversation, onConversationUpdated, onOpenThread }: DirectoryPanelProps) {
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [files, setFiles] = useState<FileAttachment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,6 +82,9 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
   const [createDeadlineOpen, setCreateDeadlineOpen] = useState(false);
   const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [isThreadsExpanded, setIsThreadsExpanded] = useState(false);
+  const [threads, setThreads] = useState<any[]>([]);
+  const [threadsLoading, setThreadsLoading] = useState(false);
   const { isUserOnline } = useUserStatus();
   const { socket } = useSocket();
 
@@ -90,11 +94,13 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
       fetchFiles();
       checkUserRole();
       fetchDeadlines();
+      fetchThreads();
     } else {
       setTeamMembers([]);
       setFiles([]);
       setCurrentUserRole('member');
       setDeadlines([]);
+      setThreads([]);
     }
   }, [conversation]);
 
@@ -227,12 +233,36 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
     socket.on('deadline_updated', handleDeadlineUpdated);
     socket.on('deadline_deleted', handleDeadlineDeleted);
 
+    // Thread name updated listener
+    const handleThreadNameUpdated = (data: { thread_id: string; thread_name: string; conversation_id: string }) => {
+      if (data.conversation_id === conversation._id) {
+        setThreads(prev => prev.map(t => 
+          t._id === data.thread_id 
+            ? { ...t, thread_name: data.thread_name }
+            : t
+        ));
+      }
+    };
+
+    // New thread reply listener - refresh threads list
+    const handleThreadReply = (data: { message: any; conversation_id: string }) => {
+      if (data.conversation_id === conversation._id && data.message.thread_id) {
+        // Refresh threads to update reply count
+        fetchThreads();
+      }
+    };
+
+    socket.on('thread_name_updated', handleThreadNameUpdated);
+    socket.on('message_received', handleThreadReply);
+
     return () => {
       socket.off('message_received', handleNewMessage);
       socket.off('conversation_updated', handleConversationUpdated);
       socket.off('deadline_created', handleDeadlineCreated);
       socket.off('deadline_updated', handleDeadlineUpdated);
       socket.off('deadline_deleted', handleDeadlineDeleted);
+      socket.off('thread_name_updated', handleThreadNameUpdated);
+      socket.off('message_received', handleThreadReply);
     };
   }, [socket, conversation, onConversationUpdated, selectedDeadline]);
 
@@ -306,6 +336,26 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
       setFiles([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchThreads = async () => {
+    if (!conversation) {
+      setThreads([]);
+      setThreadsLoading(false);
+      return;
+    }
+
+    try {
+      setThreadsLoading(true);
+      const response = await apiClient.messages.getConversationThreads(conversation._id);
+      const threadsData = (response as any).data?.threads || [];
+      setThreads(threadsData);
+    } catch (error) {
+      console.error('Error fetching threads:', error);
+      setThreads([]);
+    } finally {
+      setThreadsLoading(false);
     }
   };
 
@@ -660,6 +710,76 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
               )}
             </div>
           </>
+        )}
+
+        <div className="h-px bg-black dark:bg-white opacity-[0.08] dark:opacity-[0.1] my-6" />
+
+        {/* Threads */}
+        {conversation && (
+          <div className="flex flex-col px-4">
+            <button
+              onClick={() => setIsThreadsExpanded(!isThreadsExpanded)}
+              className="flex items-center justify-between mb-2 w-full hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg p-2 -mx-2 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-[#615EF0]" />
+                <h3 className="text-[14px] font-semibold leading-[21px] text-gray-900 dark:text-gray-100">Threads</h3>
+                <div className="px-2 py-0.5 bg-[#EDF2F7] dark:bg-gray-800 rounded-[24px]">
+                  <span className="text-[12px] font-semibold text-gray-900 dark:text-gray-100">{threads.length}</span>
+                </div>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200",
+                  !isThreadsExpanded && "-rotate-90"
+                )}
+              />
+            </button>
+
+            {isThreadsExpanded && (
+              <div className="space-y-2 max-h-[350px] overflow-y-auto">
+                {threadsLoading ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Loading threads...</p>
+                ) : threads.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 p-3">
+                    No threads in this conversation
+                  </p>
+                ) : (
+                  threads.map((thread) => (
+                    <button
+                      key={thread._id}
+                      onClick={() => {
+                        // Pass the full thread object instead of just _id
+                        // This ensures we have all the data even after reload
+                        const threadId = typeof thread._id === 'string' 
+                          ? thread._id 
+                          : (thread._id as any)?._id?.toString() || thread._id?.toString();
+                        onOpenThread?.(threadId);
+                      }}
+                      className="w-full text-left p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border border-gray-200 dark:border-gray-700"
+                    >
+                      <div className="flex items-start gap-3">
+                        <MessageCircle className="w-4 h-4 text-[#615EF0] mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                            {thread.thread_name || 'Unnamed Thread'}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
+                            {thread.content || 'No content'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2 text-xs text-gray-400 dark:text-gray-500">
+                            <span>{thread.reply_count} {thread.reply_count === 1 ? 'reply' : 'replies'}</span>
+                            <span>•</span>
+                            <span>{thread.sender_id?.username || 'Unknown'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         <div className="h-px bg-black dark:bg-white opacity-[0.08] dark:opacity-[0.1] my-6" />

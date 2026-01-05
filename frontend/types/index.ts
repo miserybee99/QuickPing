@@ -54,6 +54,7 @@ export interface Message {
   };
   reply_to?: Message;
   thread_id?: string;
+  thread_name?: string;
   is_edited: boolean;
   reactions?: Array<{
     emoji: string;

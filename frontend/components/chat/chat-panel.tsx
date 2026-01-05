@@ -67,9 +67,10 @@ function LinkifiedText({ text, className }: { text: string; className?: string }
 interface ChatPanelProps {
   conversationId: string | null;
   onConversationLoaded?: (conversation: Conversation | null) => void;
+  onOpenThreadRequest?: (messageId: string) => void;
 }
 
-export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelProps) {
+export function ChatPanel({ conversationId, onConversationLoaded, onOpenThreadRequest }: ChatPanelProps) {
   const { user: currentUser } = useUser();
   const { socket, isConnected } = useSocket();
   const { isUserOnline } = useUserStatus();
@@ -279,14 +280,72 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
           
           console.log('✅ Adding new message to state:', messageId);
           
+          // Ensure sender_id has username - populate from conversation participants or usersMap if missing
+          let populatedMessage = { ...data.message };
+          if (populatedMessage.sender_id?._id && !populatedMessage.sender_id?.username) {
+            // Try to get from conversation participants
+            const senderId = populatedMessage.sender_id._id.toString();
+            const participant = conversation?.participants?.find(
+              p => p.user_id?._id?.toString() === senderId
+            );
+            
+            if (participant?.user_id) {
+              populatedMessage.sender_id = {
+                ...populatedMessage.sender_id,
+                username: participant.user_id.username,
+                avatar_url: participant.user_id.avatar_url,
+              };
+            } else if (currentUser?._id?.toString() === senderId) {
+              // It's the current user
+              populatedMessage.sender_id = {
+                ...populatedMessage.sender_id,
+                username: currentUser.username,
+                avatar_url: currentUser.avatar_url,
+              };
+            }
+          }
+          
+          // Ensure reply_to.sender_id has username - populate from conversation participants or usersMap if missing
+          if (populatedMessage.reply_to?.sender_id?._id && !populatedMessage.reply_to?.sender_id?.username) {
+            const replyToSenderId = populatedMessage.reply_to.sender_id._id.toString();
+            const replyToParticipant = conversation?.participants?.find(
+              p => p.user_id?._id?.toString() === replyToSenderId
+            );
+            
+            if (replyToParticipant?.user_id) {
+              populatedMessage.reply_to.sender_id = {
+                ...populatedMessage.reply_to.sender_id,
+                username: replyToParticipant.user_id.username,
+                avatar_url: replyToParticipant.user_id.avatar_url,
+              };
+            } else if (currentUser?._id?.toString() === replyToSenderId) {
+              // It's the current user
+              populatedMessage.reply_to.sender_id = {
+                ...populatedMessage.reply_to.sender_id,
+                username: currentUser.username,
+                avatar_url: currentUser.avatar_url,
+              };
+            } else if (usersMap) {
+              // Try to get from usersMap
+              const userFromMap = usersMap.get(replyToSenderId);
+              if (userFromMap?.username) {
+                populatedMessage.reply_to.sender_id = {
+                  ...populatedMessage.reply_to.sender_id,
+                  username: userFromMap.username,
+                  avatar_url: userFromMap.avatar_url,
+                };
+              }
+            }
+          }
+          
           // Create message object with read_by if input is focused
           const messageToAdd = shouldMarkAsRead && currentUserId ? {
-            ...data.message,
+            ...populatedMessage,
             read_by: [
-              ...(data.message.read_by || []),
+              ...(populatedMessage.read_by || []),
               { user_id: currentUserId, read_at: new Date() }
             ]
-          } : data.message;
+          } : populatedMessage;
           
           // Sort messages by created_at to ensure correct order
           const newMessages = [...prev, messageToAdd].sort((a, b) => {
@@ -813,19 +872,26 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       const response = await api.get<{ messages: Message[] }>(`/messages/conversation/${conversationId}`);
       const fetchedMessages = response.data.messages || [];
       
-      // Calculate thread reply counts from ALL messages (including thread messages) BEFORE filtering
-      // This ensures accurate thread counts even though thread messages are excluded from main chat
-      const threadCounts = new Map<string, number>();
-      fetchedMessages.forEach(msg => {
-        if (msg.thread_id) {
-          const threadId = msg.thread_id?.toString() || (msg.thread_id as any)?._id?.toString();
-          if (threadId) {
-            const count = threadCounts.get(threadId) || 0;
-            threadCounts.set(threadId, count + 1);
+      // Fetch thread counts from threads API to get accurate reply counts
+      // This is needed because the messages API filters out thread messages
+      try {
+        const threadsResponse = await apiClient.messages.getConversationThreads(conversationId);
+        const threads = (threadsResponse as any).data?.threads || [];
+        const threadCounts = new Map<string, number>();
+        threads.forEach((thread: any) => {
+          const threadId = typeof thread._id === 'string' 
+            ? thread._id 
+            : (thread._id as any)?._id?.toString() || thread._id?.toString();
+          if (threadId && thread.reply_count) {
+            threadCounts.set(threadId, thread.reply_count);
           }
-        }
-      });
-      setThreadReplyCounts(threadCounts);
+        });
+        setThreadReplyCounts(threadCounts);
+      } catch (error) {
+        console.error('Error fetching thread counts:', error);
+        // Fallback: set empty map if threads API fails
+        setThreadReplyCounts(new Map());
+      }
       
       // Filter out thread messages - they should only appear in thread panel, not main chat
       // Also remove duplicates by ID before setting state
@@ -840,14 +906,54 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
         return index === self.findIndex(m => m._id?.toString() === msgId);
       });
       
+      // Populate reply_to.sender_id if missing
+      const populatedMessages = uniqueMessages.map(msg => {
+        if (msg.reply_to?.sender_id?._id && !msg.reply_to?.sender_id?.username) {
+          const replyToSenderId = msg.reply_to.sender_id._id.toString();
+          const replyToParticipant = conversation?.participants?.find(
+            p => p.user_id?._id?.toString() === replyToSenderId
+          );
+          
+          if (replyToParticipant?.user_id) {
+            return {
+              ...msg,
+              reply_to: {
+                ...msg.reply_to,
+                sender_id: {
+                  ...msg.reply_to.sender_id,
+                  username: replyToParticipant.user_id.username,
+                  avatar_url: replyToParticipant.user_id.avatar_url,
+                }
+              }
+            };
+          } else if (usersMap) {
+            const userFromMap = usersMap.get(replyToSenderId);
+            if (userFromMap?.username) {
+              return {
+                ...msg,
+                reply_to: {
+                  ...msg.reply_to,
+                  sender_id: {
+                    ...msg.reply_to.sender_id,
+                    username: userFromMap.username,
+                    avatar_url: userFromMap.avatar_url,
+                  }
+                }
+              };
+            }
+          }
+        }
+        return msg;
+      });
+      
       // Update ref tracker
-      uniqueMessages.forEach(msg => {
+      populatedMessages.forEach(msg => {
         if (msg._id) {
           messageIdsRef.current.add(msg._id.toString());
         }
       });
       
-      setMessages(uniqueMessages);
+      setMessages(populatedMessages);
     } catch (error: any) {
       console.error('Error fetching messages:', error);
       
@@ -1017,13 +1123,69 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   };
   
   // Handle thread
-  const handleOpenThread = (message: Message) => {
+  const handleOpenThread = async (message: Message | string) => {
     // Exclusive state: close reply if active
     if (replyingTo) {
       setReplyingTo(null);
     }
-    setActiveThread(message);
+    
+    // If messageId is provided, find the message
+    if (typeof message === 'string') {
+      const messageId = message;
+      // First try to find in current messages
+      let foundMessage = messages.find(m => {
+        const msgId = typeof m._id === 'string' ? m._id : (m._id as any)?._id?.toString() || m._id?.toString();
+        return msgId === messageId;
+      });
+      
+      if (foundMessage) {
+        setActiveThread(foundMessage);
+      } else {
+        // Message not in current messages (e.g., after reload), fetch from threads list
+        try {
+          if (conversationId) {
+            const threadsResponse = await apiClient.messages.getConversationThreads(conversationId);
+            const threads = (threadsResponse as any).data?.threads || [];
+            const thread = threads.find((t: any) => {
+              const tId = typeof t._id === 'string' ? t._id : (t._id as any)?._id?.toString() || t._id?.toString();
+              return tId === messageId;
+            });
+            
+            if (thread) {
+              // Convert thread to Message format
+              const threadMessage: Message = {
+                ...thread,
+                conversation_id: conversationId,
+                type: thread.type || 'text',
+                created_at: thread.created_at || new Date(),
+                updated_at: thread.updated_at || new Date(),
+              } as Message;
+              
+              setActiveThread(threadMessage);
+            } else {
+              console.warn('Thread not found in threads list:', messageId);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching thread from threads list:', error);
+        }
+      }
+    } else {
+      setActiveThread(message);
+    }
   };
+
+  // Expose handleOpenThread to parent via window object for DirectoryPanel
+  useEffect(() => {
+    if (onOpenThreadRequest) {
+      (window as any).__openThreadHandler = handleOpenThread;
+    }
+    return () => {
+      if (onOpenThreadRequest) {
+        delete (window as any).__openThreadHandler;
+      }
+    };
+  }, [onOpenThreadRequest, messages]);
   
   const handleCloseThread = () => {
     setActiveThread(null);
@@ -1151,8 +1313,30 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       }
       
       setShowCreateVoteModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating vote:', error);
+      // Log detailed error information for debugging
+      console.error('Full error object:', {
+        message: error?.message,
+        name: error?.name,
+        stack: error?.stack,
+        response: error?.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          headers: error.response.headers,
+          config: {
+            url: error.response.config?.url,
+            method: error.response.config?.method,
+            data: error.response.config?.data
+          }
+        } : null,
+        request: error?.request ? {
+          responseURL: error.request.responseURL,
+          status: error.request.status,
+          statusText: error.request.statusText
+        } : null
+      });
       throw error;
     }
   };
@@ -2072,23 +2256,46 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                                 ref={(el) => {
                                   if (el) messageRefs.current.set(messageId, el);
                                 }}
-                                className="flex flex-col gap-2"
+                                className="flex flex-col gap-2 relative"
                               >
+                                {/* Timestamp tooltip on hover */}
+                                {hoveredMessageId === messageId && (
+                                  <div className={cn(
+                                    'absolute z-10 px-2 py-1 text-xs rounded shadow-lg whitespace-nowrap',
+                                    isOwn
+                                      ? 'bottom-full mb-2 right-0 bg-gray-900 text-white'
+                                      : 'bottom-full mb-2 left-0 bg-gray-900 text-white'
+                                  )}>
+                                    {format(new Date(msg.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
+                                  </div>
+                                )}
                                 {/* Text content in bubble if present */}
                                 {(msg.content || msg.reply_to) && (
                                   <div
                                     className={cn(
-                                      'px-4 py-2 rounded-xl max-w-md transition-colors duration-500',
+                                      'px-4 py-2 rounded-xl max-w-md transition-colors duration-500 relative',
                                       isOwn
                                         ? 'bg-[#615EF0] text-white'
                                         : 'bg-[#F1F1F1] dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                                     )}
                                   >
+                                    {/* Timestamp tooltip on hover */}
+                                    {hoveredMessageId === messageId && (
+                                      <div className={cn(
+                                        'absolute z-10 px-2 py-1 text-xs rounded shadow-lg whitespace-nowrap',
+                                        isOwn
+                                          ? 'bottom-full mb-2 right-0 bg-gray-900 text-white'
+                                          : 'bottom-full mb-2 left-0 bg-gray-900 text-white'
+                                      )}>
+                                        {format(new Date(msg.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
+                                      </div>
+                                    )}
                                     {msg.reply_to && (
                                       <QuotedMessage
                                         message={msg.reply_to}
                                         isOwnMessage={isOwn}
                                         showInBubble={true}
+                                        usersMap={usersMap}
                                         onClick={() => scrollToMessage(msg.reply_to?._id || '')}
                                       />
                                     )}
@@ -2125,18 +2332,30 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                                   if (el) messageRefs.current.set(messageId, el);
                                 }}
                                 className={cn(
-                                  'px-4 py-2 rounded-xl max-w-md transition-colors duration-500',
+                                  'px-4 py-2 rounded-xl max-w-md transition-colors duration-500 relative',
                                   isOwn
                                     ? 'bg-[#615EF0] text-white'
                                     : 'bg-[#F1F1F1] dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                                 )}
                               >
+                                {/* Timestamp tooltip on hover */}
+                                {hoveredMessageId === messageId && (
+                                  <div className={cn(
+                                    'absolute z-10 px-2 py-1 text-xs rounded shadow-lg whitespace-nowrap',
+                                    isOwn
+                                      ? 'bottom-full mb-2 right-0 bg-gray-900 text-white'
+                                      : 'bottom-full mb-2 left-0 bg-gray-900 text-white'
+                                  )}>
+                                    {format(new Date(msg.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
+                                  </div>
+                                )}
                                 {/* Quoted message (reply_to) */}
                                 {msg.reply_to && (
                                   <QuotedMessage
                                     message={msg.reply_to}
                                     isOwnMessage={isOwn}
                                     showInBubble={true}
+                                    usersMap={usersMap}
                                     onClick={() => scrollToMessage(msg.reply_to?._id || '')}
                                   />
                                 )}

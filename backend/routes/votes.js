@@ -1,5 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
+import mongoose from 'mongoose';
 import Vote from '../models/Vote.js';
 import Conversation from '../models/Conversation.js';
 import { authenticate } from '../middleware/auth.js';
@@ -8,21 +9,73 @@ const router = express.Router();
 
 // Create vote
 router.post('/', authenticate, [
-  body('conversation_id').isMongoId(),
-  body('question').trim().isLength({ min: 1 }),
-  body('options').isArray().isLength({ min: 2 })
+  body('conversation_id')
+    .isMongoId()
+    .withMessage('Invalid conversation ID format'),
+  body('question')
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Question is required and cannot be empty'),
+  body('options')
+    .isArray({ min: 2 })
+    .withMessage('At least 2 options are required'),
+  body('options.*')
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Each option must not be empty')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      const errorMessages = errors.array().map(e => ({
+        field: e.path || e.param,
+        message: e.msg,
+        value: e.value
+      }));
+      console.error('Create vote validation error:', {
+        userId: req.user?._id,
+        errors: errorMessages,
+        body: req.body
+      });
+      // Ensure proper Content-Type header
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: errorMessages,
+        errors: errors.array() // Also include raw errors for compatibility
+      });
     }
 
     const { conversation_id, question, options, settings, expires_at } = req.body;
 
+    // Additional ObjectId validation as fallback
+    if (!mongoose.Types.ObjectId.isValid(conversation_id)) {
+      console.error('Create vote error: Invalid ObjectId format', {
+        conversation_id,
+        userId: req.user._id,
+        conversationIdType: typeof conversation_id
+      });
+      return res.status(400).json({ 
+        error: 'Invalid conversation ID format',
+        details: [{ field: 'conversation_id', message: 'Conversation ID must be a valid MongoDB ObjectId' }]
+      });
+    }
+
+    // Log the request for debugging
+    console.log('Create vote request:', {
+      userId: req.user._id,
+      conversation_id,
+      question: question?.substring(0, 50),
+      optionsCount: options?.length
+    });
+
     // Verify conversation and participation
     const conversation = await Conversation.findById(conversation_id);
     if (!conversation) {
+      console.error('Create vote error: Conversation not found', {
+        conversation_id,
+        userId: req.user._id
+      });
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
@@ -31,14 +84,34 @@ router.post('/', authenticate, [
     );
 
     if (!isParticipant) {
+      console.error('Create vote error: User is not a participant', {
+        conversation_id,
+        userId: req.user._id
+      });
       return res.status(403).json({ error: 'Not a participant' });
+    }
+
+    // Validate and clean options
+    const cleanedOptions = options
+      .map(opt => typeof opt === 'string' ? opt.trim() : String(opt).trim())
+      .filter(opt => opt.length > 0);
+
+    if (cleanedOptions.length < 2) {
+      console.error('Create vote error: Not enough valid options', {
+        conversation_id,
+        userId: req.user._id,
+        optionsCount: cleanedOptions.length
+      });
+      return res.status(400).json({ 
+        error: 'At least 2 valid options are required' 
+      });
     }
 
     const vote = new Vote({
       conversation_id,
       created_by: req.user._id,
-      question,
-      options: options.map(text => ({ text, voters: [] })),
+      question: question.trim(),
+      options: cleanedOptions.map(text => ({ text, voters: [] })),
       settings: settings || {},
       expires_at: expires_at ? new Date(expires_at) : null,
       is_active: true
@@ -47,10 +120,24 @@ router.post('/', authenticate, [
     await vote.save();
     await vote.populate('created_by', 'username avatar_url');
 
+    console.log('Vote created successfully:', {
+      voteId: vote._id,
+      conversation_id,
+      userId: req.user._id
+    });
+
     res.status(201).json({ vote });
   } catch (error) {
-    console.error('Create vote error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Create vote error:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+      conversation_id: req.body?.conversation_id
+    });
+    res.status(500).json({ 
+      error: 'Server error',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

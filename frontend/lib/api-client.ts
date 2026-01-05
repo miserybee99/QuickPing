@@ -105,6 +105,14 @@ const apiClient = {
     getThreadReplies: async (threadId: string) => {
       return await api.get(`/messages/thread/${threadId}`);
     },
+
+    updateThreadName: async (threadId: string, threadName: string) => {
+      return await api.put(`/messages/thread/${threadId}/name`, { thread_name: threadName });
+    },
+
+    getConversationThreads: async (conversationId: string) => {
+      return await api.get(`/messages/conversation/${conversationId}/threads`);
+    },
   },
 
   // ==========================================================================
