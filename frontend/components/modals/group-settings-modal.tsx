@@ -10,6 +10,9 @@ import {
   Users,
   LogOut,
   Crown,
+  Loader2,
+  Edit3,
+  FileText,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -21,9 +24,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Conversation } from '@/types';
 import api from '@/lib/api';
+import { useToast } from '@/components/ui/use-toast';
 
 interface GroupSettingsModalProps {
   open: boolean;
@@ -57,6 +64,7 @@ export function GroupSettingsModal({
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedNewAdmin, setSelectedNewAdmin] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   // Check if user is the last admin
   const admins = conversation.participants?.filter(p => p.role === 'admin') || [];
@@ -147,10 +155,19 @@ export function GroupSettingsModal({
         onConversationUpdated(response.data.conversation);
       }
       
+      toast({
+        title: "Success",
+        description: "Group settings updated successfully.",
+        variant: "success",
+      });
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error updating group:', error);
-      alert(error?.response?.data?.error || 'Could not update group. Please try again.');
+      toast({
+        title: "Update Failed",
+        description: error?.response?.data?.error || 'Could not update group. Please try again.',
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -179,7 +196,11 @@ export function GroupSettingsModal({
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error leaving group:', error);
-      alert(error?.response?.data?.error || 'Could not leave group. Please try again.');
+      toast({
+        title: "Leave Failed",
+        description: error?.response?.data?.error || 'Could not leave group. Please try again.',
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
       setConfirmAction(null);
@@ -195,7 +216,11 @@ export function GroupSettingsModal({
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error deleting group:', error);
-      alert(error?.response?.data?.error || 'Could not delete group. Please try again.');
+      toast({
+        title: "Delete Failed",
+        description: error?.response?.data?.error || 'Could not delete group. Please try again.',
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
       setConfirmAction(null);
@@ -206,35 +231,39 @@ export function GroupSettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
-        {/* Header with Avatar */}
-        <DialogHeader className="relative p-0">
-          <div className="h-24 bg-gradient-to-r from-[#615EF0] to-[#8B5CF6] relative">
+      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden dark:bg-gray-900">
+        {/* Header */}
+        <DialogHeader className="p-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Group Settings
+            </DialogTitle>
             <button
               onClick={() => onOpenChange(false)}
-              className="absolute top-3 right-3 w-8 h-8 bg-black/20 hover:bg-black/30 rounded-full flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center transition-colors"
             >
-              <X className="w-4 h-4 text-white" />
+              <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
           
-          <div className="relative -mt-12 px-6">
+          {/* Avatar and Basic Info */}
+          <div className="flex items-center gap-4">
             <div 
               className={cn(
-                "relative inline-block",
+                "relative",
                 canEdit && "cursor-pointer group"
               )}
               onClick={handleAvatarClick}
             >
-              <Avatar className="h-24 w-24 rounded-2xl border-4 border-white shadow-lg">
+              <Avatar className="h-16 w-16 rounded-xl border-2 border-gray-200 dark:border-gray-700">
                 <AvatarImage src={avatarPreview || conversation.avatar_url} />
-                <AvatarFallback className="rounded-2xl bg-[#615EF0] text-white text-2xl font-bold">
+                <AvatarFallback className="rounded-xl bg-gradient-to-br from-[#615EF0] to-[#8B5CF6] text-white text-lg font-bold">
                   {groupInitial}
                 </AvatarFallback>
               </Avatar>
               {canEdit && (
-                <div className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Camera className="w-6 h-6 text-white" />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#615EF0] rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="w-3 h-3 text-white" />
                 </div>
               )}
             </div>
@@ -245,101 +274,116 @@ export function GroupSettingsModal({
               className="hidden"
               onChange={handleAvatarChange}
             />
-          </div>
-          
-          <div className="px-6 pt-3 pb-4">
-            <DialogTitle className="text-xl font-bold">{conversation.name || 'Group'}</DialogTitle>
-            <p className="text-sm text-gray-500 mt-1">
-              <Users className="w-4 h-4 inline mr-1" />
-              {conversation.participants?.length || 0} members
-            </p>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {conversation.name || 'Group'}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-1">
+                <Users className="w-3.5 h-3.5" />
+                {conversation.participants?.length || 0} members
+              </p>
+            </div>
           </div>
         </DialogHeader>
 
         {/* Settings Form */}
-        <div className="px-6 pb-4 space-y-4 max-h-[400px] overflow-y-auto">
-          {/* Group Name */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Group Name</label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter group name"
-              disabled={!canEdit}
-              className="focus-visible:ring-[#615EF0]"
-              maxLength={100}
-            />
-          </div>
+        <ScrollArea className="max-h-[calc(100vh-300px)]">
+          <div className="p-6 space-y-6">
+            {/* Group Name */}
+            <div className="space-y-2">
+              <Label htmlFor="group-name" className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                Group Name
+              </Label>
+              <Input
+                id="group-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter group name"
+                disabled={!canEdit}
+                className="h-11 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+                maxLength={100}
+              />
+            </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter group description (optional)"
-              disabled={!canEdit}
-              className="w-full min-h-[80px] px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#615EF0] resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-              maxLength={500}
-            />
-            <p className="text-xs text-gray-400 text-right">{description.length}/500</p>
-          </div>
-
-
-
-          {/* Leave Group */}
-          <div className="pt-4 border-t border-gray-200">
-            <Button
-              variant="outline"
-              className="w-full text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
-              onClick={() => setConfirmAction('leave')}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Leave Group
-            </Button>
-            {isLastAdmin && (
-              <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                You are the only admin. Transfer ownership before leaving.
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="group-description" className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                Description
+              </Label>
+              <Textarea
+                id="group-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Enter group description (optional)"
+                disabled={!canEdit}
+                className="min-h-[100px] bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 resize-none"
+                maxLength={500}
+              />
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-right">
+                {description.length}/500
               </p>
-            )}
-          </div>
+            </div>
 
-          {/* Danger Zone - Delete Group (Admin only) */}
-          {canDelete && (
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm font-medium text-red-600 mb-2">Danger Zone</p>
+            {/* Permission notice for non-admins */}
+            {!canEdit && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 p-3 rounded-lg text-sm flex items-center gap-2 border border-amber-200 dark:border-amber-800">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span>Only admins can edit group settings.</span>
+              </div>
+            )}
+
+            <Separator className="my-2" />
+
+            {/* Actions */}
+            <div className="space-y-3">
+              {/* Leave Group */}
               <Button
                 variant="outline"
-                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                onClick={() => setConfirmAction('delete')}
+                className="w-full justify-start h-11 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+                onClick={() => setConfirmAction('leave')}
+                disabled={isSaving}
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Group
+                <LogOut className="w-4 h-4 mr-2" />
+                Leave Group
               </Button>
-            </div>
-          )}
+              {isLastAdmin && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 px-1">
+                  <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                  You are the only admin. Transfer ownership before leaving.
+                </p>
+              )}
 
-          {/* Permission notice for non-admins */}
-          {!canEdit && (
-            <div className="bg-amber-50 text-amber-700 p-3 rounded-lg text-sm flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span>Only Admin can edit group settings.</span>
+              {/* Delete Group (Admin only) */}
+              {canDelete && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start h-11 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
+                  onClick={() => setConfirmAction('delete')}
+                  disabled={isSaving}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Group
+                </Button>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        </ScrollArea>
 
         {/* Confirmation Overlay */}
         {confirmAction && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center p-4 z-10">
-            <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl">
+          <div className="absolute inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-700">
               {confirmAction === 'delete' && (
                 <>
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Trash2 className="w-6 h-6 text-red-600" />
+                  <div className="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trash2 className="w-7 h-7 text-red-600 dark:text-red-400" />
                   </div>
-                  <h3 className="text-lg font-bold text-center mb-2">Delete Group?</h3>
-                  <p className="text-sm text-gray-600 text-center mb-6">
+                  <h3 className="text-xl font-bold text-center mb-2 text-gray-900 dark:text-gray-100">
+                    Delete Group?
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
                     This action cannot be undone. All messages and group data will be permanently deleted.
                   </p>
                 </>
@@ -347,11 +391,13 @@ export function GroupSettingsModal({
               
               {confirmAction === 'leave' && !isLastAdmin && (
                 <>
-                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <LogOut className="w-6 h-6 text-amber-600" />
+                  <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <LogOut className="w-7 h-7 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <h3 className="text-lg font-bold text-center mb-2">Leave Group?</h3>
-                  <p className="text-sm text-gray-600 text-center mb-6">
+                  <h3 className="text-xl font-bold text-center mb-2 text-gray-900 dark:text-gray-100">
+                    Leave Group?
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
                     You will no longer receive messages from this group.
                   </p>
                 </>
@@ -359,11 +405,13 @@ export function GroupSettingsModal({
 
               {(confirmAction === 'leave' && isLastAdmin) || confirmAction === 'transfer' ? (
                 <>
-                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Crown className="w-6 h-6 text-amber-600" />
+                  <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Crown className="w-7 h-7 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <h3 className="text-lg font-bold text-center mb-2">Transfer Admin Role</h3>
-                  <p className="text-sm text-gray-600 text-center mb-4">
+                  <h3 className="text-xl font-bold text-center mb-2 text-gray-900 dark:text-gray-100">
+                    Transfer Admin Role
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
                     You are the only admin. Please select a replacement before leaving.
                   </p>
                   <ScrollArea className="max-h-40 mb-4">
@@ -375,17 +423,19 @@ export function GroupSettingsModal({
                           className={cn(
                             'w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all',
                             selectedNewAdmin === p.user_id?._id
-                              ? 'border-[#615EF0] bg-[#615EF0]/5'
-                              : 'border-gray-200 hover:border-gray-300'
+                              ? 'border-[#615EF0] bg-[#615EF0]/5 dark:bg-[#615EF0]/20 dark:border-[#615EF0]'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
                           )}
                         >
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={p.user_id?.avatar_url} />
-                            <AvatarFallback>
+                            <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                               {p.user_id?.username?.[0]?.toUpperCase() || 'U'}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm font-medium">{p.user_id?.username}</span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {p.user_id?.username}
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -393,10 +443,10 @@ export function GroupSettingsModal({
                 </>
               ) : null}
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 mt-6">
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 h-11"
                   onClick={() => {
                     setConfirmAction(null);
                     setSelectedNewAdmin(null);
@@ -407,10 +457,10 @@ export function GroupSettingsModal({
                 </Button>
                 <Button
                   className={cn(
-                    'flex-1',
+                    'flex-1 h-11',
                     confirmAction === 'delete'
-                      ? 'bg-red-600 hover:bg-red-700'
-                      : 'bg-amber-600 hover:bg-amber-700'
+                      ? 'bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700'
+                      : 'bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700'
                   )}
                   onClick={
                     confirmAction === 'delete'
@@ -422,13 +472,18 @@ export function GroupSettingsModal({
                     (isLastAdmin && confirmAction !== 'delete' && !selectedNewAdmin)
                   }
                 >
-                  {isSaving
-                    ? 'Processing...'
-                    : confirmAction === 'delete'
-                    ? 'Delete Group'
-                    : isLastAdmin && selectedNewAdmin
-                    ? 'Transfer & Leave'
-                    : 'Leave Group'}
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : confirmAction === 'delete' ? (
+                    'Delete Group'
+                  ) : isLastAdmin && selectedNewAdmin ? (
+                    'Transfer & Leave'
+                  ) : (
+                    'Leave Group'
+                  )}
                 </Button>
               </div>
             </div>
@@ -436,22 +491,26 @@ export function GroupSettingsModal({
         )}
 
         {/* Footer Actions */}
-        <div className="border-t p-4 flex justify-end gap-3">
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-3">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
+            className="h-11"
           >
-            Close
+            Cancel
           </Button>
           {canEdit && (
             <Button
-              className="bg-[#615EF0] hover:bg-[#5048D9]"
+              className="bg-[#615EF0] hover:bg-[#5048D9] dark:bg-[#615EF0] dark:hover:bg-[#5048D9] h-11"
               onClick={handleSave}
               disabled={isSaving || !hasChanges}
             >
               {isSaving ? (
-                'Saving...'
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />

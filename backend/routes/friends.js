@@ -37,17 +37,43 @@ router.post('/request', authenticate, [
     });
 
     if (friendship) {
-      return res.status(400).json({ error: 'Friendship already exists' });
+      // If friendship exists and is already pending or accepted, return error
+      if (friendship.status === 'pending' || friendship.status === 'accepted') {
+        return res.status(400).json({ error: 'Friendship already exists' });
+      }
+      
+      // If friendship was rejected, update it to pending (allow re-adding)
+      if (friendship.status === 'rejected' || friendship.status === 'blocked') {
+        // Check if current user was the one who sent the original request
+        const isOriginalSender = friendship.user_id.toString() === req.user._id.toString();
+        
+        // If current user was the original sender, update the existing friendship
+        if (isOriginalSender) {
+          friendship.status = 'pending';
+          friendship.sent_at = new Date();
+          friendship.responded_at = null;
+          await friendship.save();
+        } else {
+          // If current user was not the original sender, we need to flip user_id and friend_id
+          // Delete old friendship and create a new one
+          await Friendship.findByIdAndDelete(friendship._id);
+          friendship = new Friendship({
+            user_id: req.user._id,
+            friend_id,
+            status: 'pending'
+          });
+          await friendship.save();
+        }
+      }
+    } else {
+      // Create new friend request
+      friendship = new Friendship({
+        user_id: req.user._id,
+        friend_id,
+        status: 'pending'
+      });
+      await friendship.save();
     }
-
-    // Create friend request
-    friendship = new Friendship({
-      user_id: req.user._id,
-      friend_id,
-      status: 'pending'
-    });
-
-    await friendship.save();
 
     // Create notification
     const notification = new Notification({

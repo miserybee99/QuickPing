@@ -465,26 +465,22 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
   };
 
   return (
-    <div className="border-l border-gray-200 flex flex-col bg-white shadow-[1px_0px_0px_0px_rgba(0,0,0,0.08)] h-screen overflow-hidden">
+    <div className="border-l border-gray-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-900 shadow-[1px_0px_0px_0px_rgba(0,0,0,0.08)] dark:shadow-[1px_0px_0px_0px_rgba(255,255,255,0.05)] h-screen overflow-hidden">
       {/* Header */}
       <div className="flex flex-col flex-shrink-0">
         <div className="flex items-center justify-between px-6 py-6">
-          <h2 className="text-[20px] font-semibold">Directory</h2>
-          {conversation?.type === 'group' ? (
+          <h2 className="text-[20px] font-semibold text-gray-900 dark:text-gray-100">Directory</h2>
+          {conversation?.type === 'group' && (
             <button
               onClick={() => setSettingsModalOpen(true)}
-              className="w-10 h-10 flex items-center justify-center bg-[#EFEFFD] hover:bg-[#615EF0]/20 rounded-full transition-colors"
+              className="w-10 h-10 flex items-center justify-center bg-[#EFEFFD] dark:bg-[#615EF0]/20 hover:bg-[#615EF0]/20 dark:hover:bg-[#615EF0]/30 rounded-full transition-colors"
               title="Group Settings"
             >
               <Settings className="w-6 h-6 text-[#615EF0]" strokeWidth={2} />
             </button>
-          ) : (
-            <button className="w-10 h-10 flex items-center justify-center bg-[#EFEFFD] hover:bg-[#615EF0]/20 rounded-full transition-colors">
-              <MoreHorizontal className="w-6 h-6 text-[#615EF0]" strokeWidth={2} />
-            </button>
           )}
         </div>
-        <div className="h-px bg-black opacity-[0.08]" />
+        <div className="h-px bg-black dark:bg-white opacity-[0.08] dark:opacity-[0.1]" />
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -498,12 +494,12 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
         <div className="flex flex-col px-4 pt-6">
           <div
             onClick={() => setIsMembersExpanded(!isMembersExpanded)}
-            className="flex items-center justify-between mb-2 w-full hover:bg-gray-50 rounded-lg p-2 -mx-2 transition-colors cursor-pointer"
+            className="flex items-center justify-between mb-2 w-full hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg p-2 -mx-2 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2">
-              <h3 className="text-[14px] font-semibold leading-[21px]">Team Members</h3>
-              <div className="px-2 py-0.5 bg-[#EDF2F7] rounded-[24px]">
-                <span className="text-[12px] font-semibold">{teamMembers.length}</span>
+              <h3 className="text-[14px] font-semibold leading-[21px] text-gray-900 dark:text-gray-100">Team Members</h3>
+              <div className="px-2 py-0.5 bg-[#EDF2F7] dark:bg-gray-800 rounded-[24px]">
+                <span className="text-[12px] font-semibold text-gray-900 dark:text-gray-100">{teamMembers.length}</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -513,7 +509,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                     e.stopPropagation();
                     setAddMembersOpen(true);
                   }}
-                  className="w-8 h-8 flex items-center justify-center bg-[#615EF0]/10 hover:bg-[#615EF0]/20 rounded-full transition-colors"
+                  className="w-8 h-8 flex items-center justify-center bg-[#615EF0]/10 dark:bg-[#615EF0]/20 hover:bg-[#615EF0]/20 dark:hover:bg-[#615EF0]/30 rounded-full transition-colors"
                   title="Add members"
                 >
                   <UserPlus className="w-4 h-4 text-[#615EF0]" />
@@ -521,7 +517,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
               )}
               <ChevronDown
                 className={cn(
-                  "w-5 h-5 text-gray-500 transition-transform duration-200",
+                  "w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200",
                   !isMembersExpanded && "-rotate-90"
                 )}
               />
@@ -531,9 +527,9 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
           {isMembersExpanded && (
             <div className="space-y-2 max-h-[300px] overflow-y-auto">
               {loading ? (
-                <p className="text-sm text-gray-500">Loading...</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
               ) : teamMembers.length === 0 ? (
-                <p className="text-sm text-gray-500 p-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400 p-3">
                   {conversation ? 'No members found' : 'Select a conversation to see members'}
                 </p>
               ) : (
@@ -542,11 +538,11 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                   const canManage = canManageMember(member._id);
 
                   return (
-                    <div key={member._id} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors group">
+                    <div key={member._id} className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors group">
                       <div className="relative">
                         <Avatar className="h-12 w-12 rounded-xl flex-shrink-0">
                           <AvatarImage src={getFileUrl(member.avatar_url)} />
-                          <AvatarFallback className="rounded-xl bg-gray-200">
+                          <AvatarFallback className="rounded-xl bg-gray-200 dark:bg-gray-700">
                             {member.username[0]?.toUpperCase() || 'U'}
                           </AvatarFallback>
                         </Avatar>
@@ -558,7 +554,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-[14px] font-semibold leading-[21px] truncate">{member.username}</p>
+                          <p className="text-[14px] font-semibold leading-[21px] truncate text-gray-900 dark:text-gray-100">{member.username}</p>
                           <RoleIcon role={memberRole} size="sm" />
                         </div>
                         <div className="flex items-center gap-2">
@@ -566,7 +562,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                             <RoleBadge role={memberRole} size="sm" showIcon={false} />
                           )}
                           {member.mssv && (
-                            <span className="text-[11px] text-gray-500">• {member.mssv}</span>
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400">• {member.mssv}</span>
                           )}
                         </div>
                       </div>
@@ -575,7 +571,7 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                       {canOpenRoleModal(member._id) && conversation?.type === 'group' && (
                         <button
                           onClick={() => openRoleModal(member)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-[#615EF0]/10 rounded-lg"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-[#615EF0]/10 dark:hover:bg-[#615EF0]/20 rounded-lg"
                           title={currentUserRole === 'admin' ? 'Manage Role' : 'Remove Member'}
                         >
                           <MoreHorizontal className="w-4 h-4 text-[#615EF0]" />
@@ -592,25 +588,25 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
         {/* Calendar - Only show for group chats */}
         {conversation?.type === 'group' && (
           <>
-            <div className="h-px bg-black opacity-[0.08] my-6" />
+            <div className="h-px bg-black dark:bg-white opacity-[0.08] dark:opacity-[0.1] my-6" />
 
             <div className="flex flex-col px-4">
               <button
                 onClick={() => setIsCalendarExpanded(!isCalendarExpanded)}
-                className="flex items-center justify-between mb-2 w-full hover:bg-gray-50 rounded-lg p-2 -mx-2 transition-colors"
+                className="flex items-center justify-between mb-2 w-full hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg p-2 -mx-2 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#615EF0]" />
-                  <h3 className="text-[14px] font-semibold leading-[21px]">Deadlines</h3>
-                  <div className="px-2 py-0.5 bg-[#EDF2F7] rounded-[24px]">
-                    <span className="text-[12px] font-semibold">
+                  <h3 className="text-[14px] font-semibold leading-[21px] text-gray-900 dark:text-gray-100">Deadlines</h3>
+                  <div className="px-2 py-0.5 bg-[#EDF2F7] dark:bg-gray-800 rounded-[24px]">
+                    <span className="text-[12px] font-semibold text-gray-900 dark:text-gray-100">
                       {deadlines.length}
                     </span>
                   </div>
                 </div>
                 <ChevronDown
                   className={cn(
-                    "w-5 h-5 text-gray-500 transition-transform duration-200",
+                    "w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200",
                     !isCalendarExpanded && "-rotate-90"
                   )}
                 />
@@ -666,23 +662,23 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
           </>
         )}
 
-        <div className="h-px bg-black opacity-[0.08] my-6" />
+        <div className="h-px bg-black dark:bg-white opacity-[0.08] dark:opacity-[0.1] my-6" />
 
         {/* Files */}
         <div className="flex flex-col px-4">
           <button
             onClick={() => setIsFilesExpanded(!isFilesExpanded)}
-            className="flex items-center justify-between mb-2 w-full hover:bg-gray-50 rounded-lg p-2 -mx-2 transition-colors"
+            className="flex items-center justify-between mb-2 w-full hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg p-2 -mx-2 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <h3 className="text-[14px] font-semibold leading-[21px]">Files</h3>
-              <div className="px-2 py-0.5 bg-[#EDF2F7] rounded-[24px]">
-                <span className="text-[12px] font-semibold">{files.length}</span>
+              <h3 className="text-[14px] font-semibold leading-[21px] text-gray-900 dark:text-gray-100">Files</h3>
+              <div className="px-2 py-0.5 bg-[#EDF2F7] dark:bg-gray-800 rounded-[24px]">
+                <span className="text-[12px] font-semibold text-gray-900 dark:text-gray-100">{files.length}</span>
               </div>
             </div>
             <ChevronDown
               className={cn(
-                "w-5 h-5 text-gray-500 transition-transform duration-200",
+                "w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200",
                 !isFilesExpanded && "-rotate-90"
               )}
             />
@@ -691,34 +687,34 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
           {isFilesExpanded && (
             <div className="space-y-2 max-h-[350px] overflow-y-auto">
               {loading ? (
-                <p className="text-sm text-gray-500">Loading files...</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Loading files...</p>
               ) : files.length === 0 ? (
-                <p className="text-sm text-gray-500 p-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400 p-3">
                   {conversation ? 'No files in this conversation' : 'Select a conversation to see files'}
                 </p>
               ) : (
                 files.map((file, index) => {
                   const extension = getFileExtension(file.original_name);
                   const getBgColor = () => {
-                    if (file.mime_type?.startsWith('image/')) return 'bg-[#F0FFF4]';
-                    if (file.mime_type?.includes('pdf')) return 'bg-[#FFF5F5]';
-                    if (file.mime_type?.includes('word') || file.mime_type?.includes('document')) return 'bg-[#EBF8FF]';
-                    if (file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) return 'bg-[#FAF5FF]';
-                    return 'bg-gray-100';
+                    if (file.mime_type?.startsWith('image/')) return 'bg-[#F0FFF4] dark:bg-green-500/10';
+                    if (file.mime_type?.includes('pdf')) return 'bg-[#FFF5F5] dark:bg-red-500/10';
+                    if (file.mime_type?.includes('word') || file.mime_type?.includes('document')) return 'bg-[#EBF8FF] dark:bg-blue-500/10';
+                    if (file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) return 'bg-[#FAF5FF] dark:bg-purple-500/10';
+                    return 'bg-gray-100 dark:bg-gray-800';
                   };
 
                   const getIconColor = () => {
-                    if (file.mime_type?.startsWith('image/')) return 'text-[#48BB78]';
-                    if (file.mime_type?.includes('pdf')) return 'text-[#F56565]';
-                    if (file.mime_type?.includes('word') || file.mime_type?.includes('document')) return 'text-[#4299E1]';
-                    if (file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) return 'text-[#9F7AEA]';
-                    return 'text-gray-600';
+                    if (file.mime_type?.startsWith('image/')) return 'text-[#48BB78] dark:text-green-400';
+                    if (file.mime_type?.includes('pdf')) return 'text-[#F56565] dark:text-red-400';
+                    if (file.mime_type?.includes('word') || file.mime_type?.includes('document')) return 'text-[#4299E1] dark:text-blue-400';
+                    if (file.mime_type?.includes('spreadsheet') || file.mime_type?.includes('excel')) return 'text-[#9F7AEA] dark:text-purple-400';
+                    return 'text-gray-600 dark:text-gray-400';
                   };
 
                   return (
                     <div
                       key={`${file._id}-${file.message_id}-${index}`}
-                      className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                      className="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors"
                     >
                       <div className={cn('w-12 h-12 flex items-center justify-center rounded-xl', getBgColor())}>
                         {file.mime_type?.includes('pdf') && (
@@ -738,10 +734,10 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-semibold leading-[21px] truncate">{file.original_name}</p>
+                        <p className="text-[14px] font-semibold leading-[21px] truncate text-gray-900 dark:text-gray-100">{file.original_name}</p>
                         <div className="flex gap-2.5">
-                          <span className="text-[12px] font-semibold text-gray-900 opacity-40">{extension}</span>
-                          <span className="text-[12px] font-semibold text-gray-900 opacity-40">{formatFileSize(file.size)}</span>
+                          <span className="text-[12px] font-semibold text-gray-900 dark:text-gray-400 opacity-40">{extension}</span>
+                          <span className="text-[12px] font-semibold text-gray-900 dark:text-gray-400 opacity-40">{formatFileSize(file.size)}</span>
                         </div>
                       </div>
                       <button
@@ -777,10 +773,10 @@ export function DirectoryPanel({ conversation, onConversationUpdated }: Director
 
       {/* Leave Group Button for group chats */}
       {conversation && conversation.type === 'group' && (
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4">
           <Button
             variant="outline"
-            className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            className="w-full text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
             onClick={handleLeaveGroup}
           >
             <LogOut className="w-4 h-4 mr-2" />

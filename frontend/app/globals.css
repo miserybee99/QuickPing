@@ -358,3 +358,68 @@
 .card-interactive {
   @apply cursor-pointer card-hover active:scale-[0.99];
 }
+
+/* ===== Friends Page Tabs Flex Fix ===== */
+/* Target the wrapper div - prevent any shrinking */
+div.w-full:has(> [role="tablist"]) {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  position: relative !important;
+}
+
+/* Target Radix TabsPrimitive.List directly - force flex and prevent shrinking */
+[role="tablist"] {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  gap: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Prevent inline styles from overriding - use !important on all width properties */
+[role="tablist"][style*="width"] {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Ensure each tab trigger takes equal space and cannot shrink */
+[role="tablist"] > [role="tab"] {
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out !important;
+  box-sizing: border-box !important;
+}
+
+/* Prevent any width changes on tab triggers - force equal width */
+[role="tablist"] > [role="tab"][style*="width"] {
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+}
+
+/* Active tab styling - match Friends icon in navbar */
+[role="tablist"] > [role="tab"][data-state="active"] {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Inactive tab styling */
+[role="tablist"] > [role="tab"][data-state="inactive"] {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Hover effect - match Friends icon hover in navbar */
+[role="tablist"] > [role="tab"]:hover:not([data-state="active"]) {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}

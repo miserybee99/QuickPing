@@ -5,7 +5,8 @@ import { motion } from 'framer-motion';
 import { UserCheck, UserPlus, UserMinus, Check, X, Search, UserX, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { FriendsTabsList, TabsTrigger } from '@/components/ui/friends-tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,6 +24,8 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { User } from '@/types';
 import { useUserStatus } from '@/contexts/UserStatusContext';
+import { useSocket } from '@/contexts/SocketContext';
+import { useFriendRequests } from '@/contexts/FriendRequestsContext';
 import { PageHeader } from '@/components/layout';
 import { PageContainer, PageWrapper } from '@/components/layout';
 import { toast } from '@/components/ui/use-toast';
@@ -38,6 +41,8 @@ interface FriendRequest {
 export default function FriendsPage() {
   const router = useRouter();
   const { isUserOnline } = useUserStatus();
+  const { socket } = useSocket();
+  const { refreshRequests } = useFriendRequests();
   const [searchQuery, setSearchQuery] = useState('');
   const [friends, setFriends] = useState<User[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -48,10 +53,53 @@ export default function FriendsPage() {
     open: false,
     friend: null,
   });
-
   useEffect(() => {
     loadData();
   }, []);
+
+  // Listen for real-time friend request updates
+  useEffect(() => {
+    if (!socket) return;
+
+    // Listen for new friend request received
+    const handleFriendRequestReceived = (data: {
+      from_user: { _id: string; username: string; avatar_url?: string };
+      friendship_id: string;
+    }) => {
+      console.log('📨 Friend request received in real-time:', data);
+      
+      // Fetch updated requests list
+      loadData();
+      
+      // Show toast notification
+      toast({
+        title: 'New Friend Request',
+        description: `${data.from_user.username} sent you a friend request`,
+        variant: 'default',
+      });
+    };
+
+    // Listen for friendship status changes (accept/reject)
+    const handleFriendshipStatusChanged = (data: {
+      user_id: string;
+      friend_id: string;
+      status: string;
+      friendship_id: string;
+    }) => {
+      console.log('👫 Friendship status changed in real-time:', data);
+      
+      // Reload data to reflect changes
+      loadData();
+    };
+
+    socket.on('friend_request_received', handleFriendRequestReceived);
+    socket.on('friendship_status_changed', handleFriendshipStatusChanged);
+
+    return () => {
+      socket.off('friend_request_received', handleFriendRequestReceived);
+      socket.off('friendship_status_changed', handleFriendshipStatusChanged);
+    };
+  }, [socket]);
 
   const loadData = async () => {
     try {
@@ -89,6 +137,7 @@ export default function FriendsPage() {
     try {
       await apiClient.friends.acceptRequest(friendshipId);
       await loadData(); // Reload
+      await refreshRequests(); // Refresh badge count
     } catch (error) {
       console.error('Error accepting request:', error);
     } finally {
@@ -101,6 +150,7 @@ export default function FriendsPage() {
     try {
       await apiClient.friends.rejectRequest(friendshipId);
       setRequests(requests.filter((r) => r._id !== friendshipId));
+      await refreshRequests(); // Refresh badge count
     } catch (error) {
       console.error('Error rejecting request:', error);
     } finally {
@@ -189,26 +239,26 @@ export default function FriendsPage() {
 
       <PageContainer maxWidth="2xl">
         <Tabs defaultValue="all" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[500px]">
+          <FriendsTabsList>
             <TabsTrigger value="all">
-              All
-              <Badge variant="secondary" className="ml-2">
+              <span className="truncate">All</span>
+              <Badge variant="secondary" className="ml-2 shrink-0">
                 {friends.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="pending">
-              Pending
-              <Badge variant="secondary" className="ml-2">
+              <span className="truncate">Pending</span>
+              <Badge variant="secondary" className="ml-2 shrink-0">
                 {requests.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="blocked">
-              Blocked
-              <Badge variant="secondary" className="ml-2">
+              <span className="truncate">Blocked</span>
+              <Badge variant="secondary" className="ml-2 shrink-0">
                 {blocked.length}
               </Badge>
             </TabsTrigger>
-          </TabsList>
+          </FriendsTabsList>
 
           {/* All Friends */}
           <TabsContent value="all" className="space-y-4">

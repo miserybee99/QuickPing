@@ -14,9 +14,9 @@ const Toast = React.forwardRef<
       className={cn(
         "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-lg border p-6 pr-8 shadow-lg transition-all",
         {
-          "border-gray-200 bg-white": variant === "default",
-          "border-red-200 bg-red-50": variant === "destructive",
-          "border-green-200 bg-green-50": variant === "success",
+          "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100": variant === "default",
+          "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/30 text-red-900 dark:text-red-100": variant === "destructive",
+          "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/30 text-green-900 dark:text-green-100": variant === "success",
         },
         className
       )}
@@ -48,7 +48,7 @@ const ToastClose = React.forwardRef<
   <button
     ref={ref}
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1.5 text-foreground/60 hover:text-foreground hover:bg-black/5 transition-all focus:outline-none focus:ring-2",
+      "absolute right-2 top-2 rounded-md p-1.5 text-foreground/60 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-all focus:outline-none focus:ring-2",
       className
     )}
     toast-close=""
@@ -65,7 +65,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn("text-sm font-semibold", className)}
+    className={cn("text-sm font-semibold [&_+_*]:mt-1", className)}
     {...props}
   />
 ))
@@ -77,7 +77,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm opacity-90", className)}
+    className={cn("text-sm opacity-90 [&_p]:leading-relaxed", className)}
     {...props}
   />
 ))

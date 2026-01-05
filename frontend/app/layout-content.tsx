@@ -4,12 +4,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { Loader2 } from 'lucide-react';
+import { FriendRequestsProvider } from '@/contexts/FriendRequestsContext';
 
-export default function LayoutContent({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function LayoutContentInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
@@ -112,6 +109,18 @@ export default function LayoutContent({
         {children}
       </main>
     </div>
+  );
+}
+
+export default function LayoutContent({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <FriendRequestsProvider>
+      <LayoutContentInner>{children}</LayoutContentInner>
+    </FriendRequestsProvider>
   );
 }
 

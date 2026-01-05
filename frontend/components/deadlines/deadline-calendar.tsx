@@ -100,28 +100,31 @@ export function DeadlineCalendar({
     };
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full relative">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4 px-2">
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={goToPrevMonth}>
+            <div className="flex items-center justify-between mb-4 px-2 gap-2 relative z-10">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button variant="ghost" size="icon" onClick={goToPrevMonth} className="h-8 w-8">
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <h3 className="font-semibold text-sm min-w-[120px] text-center">
                         {MONTHS[month]} {year}
                     </h3>
-                    <Button variant="ghost" size="icon" onClick={goToNextMonth}>
+                    <Button variant="ghost" size="icon" onClick={goToNextMonth} className="h-8 w-8">
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={goToToday}>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button variant="outline" size="sm" onClick={goToToday} className="h-8 px-3">
                         Today
                     </Button>
                     {isAdmin && onCreateClick && (
-                        <Button size="sm" onClick={onCreateClick}>
-                            <Plus className="h-4 w-4 mr-1" />
-                            Create
+                        <Button 
+                            size="sm" 
+                            onClick={onCreateClick} 
+                            className="h-8 w-8 p-0 bg-[#615EF0] hover:bg-[#5048D9] text-white flex items-center justify-center relative z-10"
+                        >
+                            <Plus className="h-4 w-4" />
                         </Button>
                     )}
                 </div>

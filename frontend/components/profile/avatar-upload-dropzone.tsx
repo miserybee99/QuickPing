@@ -153,7 +153,7 @@ export function AvatarUploadDropzone({
   return (
     <>
       {/* Avatar Display with Change Button */}
-      <div className="relative group">
+      <div className="relative group flex flex-col items-center">
         <Avatar className={cn(sizeClasses[size], 'ring-4 ring-background shadow-lg')}>
           <AvatarImage src={currentAvatarUrl} />
           <AvatarFallback className="text-4xl bg-gradient-to-br from-[#615EF0] to-[#8B5CF6] text-white">

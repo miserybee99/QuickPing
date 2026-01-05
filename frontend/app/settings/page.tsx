@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Moon, Sun, User as UserIcon, X, Monitor, Settings, Save, Loader2, Palette, UserCircle, LogOut, Trash2 } from 'lucide-react';
+import { Moon, Sun, User as UserIcon, X, Settings, Save, Loader2, UserCircle, LogOut, Mail, User, GraduationCap, FileText } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useUser } from '@/hooks/useUser';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -21,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'light' | 'dark';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -39,10 +38,6 @@ export default function SettingsPage() {
   });
   const [savingProfile, setSavingProfile] = useState(false);
   
-  // Pending (unsaved) settings - these are what user sees but not yet applied
-  const [pendingTheme, setPendingTheme] = useState<Theme>(savedTheme);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
   // Load profile data
   useEffect(() => {
     if (user) {
@@ -56,23 +51,10 @@ export default function SettingsPage() {
     }
   }, [user]);
   
-  // Sync pending state with saved state on mount
-  useEffect(() => {
-    setPendingTheme(savedTheme);
-  }, [savedTheme]);
-  
-  // Track unsaved changes
-  useEffect(() => {
-    const themeChanged = pendingTheme !== savedTheme;
-    setHasUnsavedChanges(themeChanged);
-  }, [pendingTheme, savedTheme]);
-  
-  // Loading states
-  const [saving, setSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  // Tab state
-  const [activeTab, setActiveTab] = useState<'profile' | 'preferences'>('profile');
+  // Normalize savedTheme to 'light' or 'dark' (remove 'system')
+  const currentTheme: Theme = savedTheme === 'system' 
+    ? (resolvedTheme === 'dark' ? 'dark' : 'light')
+    : (savedTheme === 'dark' ? 'dark' : 'light');
 
   // Handle avatar upload
   const handleAvatarUpload = async (url: string) => {
@@ -121,49 +103,30 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSavePreferences = async () => {
+  const handleThemeChange = async (theme: Theme) => {
     try {
-      setSaving(true);
+      // Apply theme immediately
+      applySavedTheme(theme);
       
-      // Apply pending appearance changes
-      if (pendingTheme !== savedTheme) {
-        applySavedTheme(pendingTheme);
-      }
-      
-      // Save to backend (only theme now)
+      // Save to backend
       await apiClient.users.updatePreferences({
-        theme: pendingTheme,
+        theme: theme,
       });
-      
-      setHasUnsavedChanges(false);
-      setSaveSuccess(true);
       
       toast({
-        title: "Settings Saved",
-        description: "Your preferences have been saved successfully.",
+        title: "Theme Updated",
+        description: `Theme changed to ${theme === 'dark' ? 'dark' : 'light'} mode.`,
         variant: "success"
       });
-      
-      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
-      console.error('Error saving preferences:', error);
-      const errorMessage = error?.response?.data?.error || 'Could not save settings. Please try again.';
+      console.error('Error saving theme:', error);
+      const errorMessage = error?.response?.data?.error || 'Could not save theme. Please try again.';
       toast({
         title: "Save Failed",
         description: errorMessage,
         variant: "destructive"
       });
-    } finally {
-      setSaving(false);
     }
-  };
-  
-  const handleResetAppearance = () => {
-    setPendingTheme(savedTheme);
-  };
-  
-  const handleResetToDefaults = () => {
-    setPendingTheme('system');
   };
 
   const handleLogout = () => {
@@ -196,392 +159,181 @@ export default function SettingsPage() {
 
       <ScrollArea className="flex-1">
         <div className="container max-w-5xl mx-auto py-8 px-4 sm:px-6">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'profile' | 'preferences')} className="w-full">
-            {/* Custom Tabs with Primary Color Active State - Matching Sidebar Style */}
-            <div className="flex gap-3 mb-8">
-              <button
-                onClick={() => setActiveTab('profile')}
-                className={cn(
-                  "relative flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200",
-                  activeTab === 'profile'
-                    ? 'bg-primary text-primary-foreground shadow-md'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                )}
-              >
-                <UserCircle className="w-4 h-4" strokeWidth={activeTab === 'profile' ? 2.5 : 2} />
-                Profile
-              </button>
-              <button
-                onClick={() => setActiveTab('preferences')}
-                className={cn(
-                  "relative flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200",
-                  activeTab === 'preferences'
-                    ? 'bg-primary text-primary-foreground shadow-md'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                )}
-              >
-                <Palette className="w-4 h-4" strokeWidth={activeTab === 'preferences' ? 2.5 : 2} />
-                Preferences
-              </button>
-            </div>
-
-        {/* PROFILE TAB */}
-            <TabsContent value="profile" className="space-y-6 mt-0">
-              <Card className="shadow-sm border">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <UserIcon className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl">Profile Information</CardTitle>
-                      <CardDescription className="mt-1">
-                Update your personal information and avatar
-              </CardDescription>
+          <Card className="shadow-sm border border-border/50">
+            <CardHeader className="pb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+                  <UserCircle className="w-6 h-6 text-primary" strokeWidth={2} />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold">Profile Information</CardTitle>
+                  <CardDescription className="mt-1.5 text-base">
+                    Update your personal information and avatar
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column - Avatar & Appearance */}
+                <div className="lg:col-span-1 space-y-6">
+                  {/* Avatar */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      Avatar
+                    </Label>
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border-2 border-dashed border-muted-foreground/20 hover:border-primary/30 transition-colors flex flex-col items-center justify-center">
+                      <AvatarUploadDropzone
+                        currentAvatarUrl={profile.avatar_url}
+                        onAvatarChange={handleAvatarUpload}
+                        username={profile.username}
+                        size="md"
+                      />
                     </div>
                   </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Avatar Upload */}
+
+                  {/* Appearance */}
                   <div className="space-y-3">
-                    <Label className="text-base font-semibold">Avatar</Label>
-                    <div className="p-4 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/20">
-                <AvatarUploadDropzone
-                  currentAvatarUrl={profile.avatar_url}
-                  onAvatarChange={handleAvatarUpload}
-                  username={profile.username}
-                />
+                    <Label className="text-base font-semibold">Appearance</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={currentTheme === 'light' ? 'default' : 'outline'}
+                        onClick={() => handleThemeChange('light')}
+                        className={cn(
+                          "flex-1 h-10",
+                          currentTheme === 'light' && "bg-primary text-primary-foreground"
+                        )}
+                      >
+                        <Sun className="w-4 h-4 mr-2" />
+                        Light
+                      </Button>
+                      <Button
+                        variant={currentTheme === 'dark' ? 'default' : 'outline'}
+                        onClick={() => handleThemeChange('dark')}
+                        className={cn(
+                          "flex-1 h-10",
+                          currentTheme === 'dark' && "bg-primary text-primary-foreground"
+                        )}
+                      >
+                        <Moon className="w-4 h-4 mr-2" />
+                        Dark
+                      </Button>
                     </div>
-              </div>
+                  </div>
+                </div>
 
-                  <Separator className="my-6" />
-
+                {/* Right Column - Account Information */}
+                <div className="lg:col-span-2 space-y-6">
                   {/* Form Fields */}
-                  <div className="grid gap-6">
-              {/* Username */}
-              <div className="space-y-2">
-                      <Label htmlFor="username" className="text-sm font-semibold">
+                  <div className="grid gap-5">
+                    {/* Username */}
+                    <div className="space-y-2.5">
+                      <Label htmlFor="username" className="text-sm font-semibold flex items-center gap-2">
+                        <User className="w-4 h-4 text-muted-foreground" />
                         Username
                       </Label>
-                <Input
-                  id="username"
-                  value={profile.username}
-                  onChange={(e) => setProfile(prev => ({ ...prev, username: e.target.value }))}
+                      <Input
+                        id="username"
+                        value={profile.username}
+                        onChange={(e) => setProfile(prev => ({ ...prev, username: e.target.value }))}
                         placeholder="Enter your username"
-                        className="h-11"
-                />
-              </div>
+                        className="h-12 text-base"
+                      />
+                    </div>
 
-              {/* Email (read-only) */}
-              <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm font-semibold">
+                    {/* Email (read-only) */}
+                    <div className="space-y-2.5">
+                      <Label htmlFor="email" className="text-sm font-semibold flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
                         Email Address
                       </Label>
-                <Input
-                  id="email"
-                  value={profile.email}
-                  disabled
-                        className="h-11 bg-muted/50 cursor-not-allowed"
-                />
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <span>•</span> Email cannot be changed for security reasons
-                </p>
-              </div>
+                      <Input
+                        id="email"
+                        value={profile.email}
+                        disabled
+                        className="h-12 bg-muted/50 cursor-not-allowed text-base"
+                      />
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1.5">
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                        Email cannot be changed for security reasons
+                      </p>
+                    </div>
 
-              {/* MSSV (read-only) */}
-              {profile.mssv && (
-                <div className="space-y-2">
-                        <Label htmlFor="mssv" className="text-sm font-semibold">
+                    {/* MSSV (read-only) */}
+                    {profile.mssv && (
+                      <div className="space-y-2.5">
+                        <Label htmlFor="mssv" className="text-sm font-semibold flex items-center gap-2">
+                          <GraduationCap className="w-4 h-4 text-muted-foreground" />
                           Student ID (MSSV)
                         </Label>
                         <div className="flex items-center gap-3">
-                    <Input
-                      id="mssv"
-                      value={profile.mssv}
-                      disabled
-                            className="h-11 bg-muted/50 cursor-not-allowed flex-1"
-                    />
-                          <Badge variant="secondary" className="px-3 py-1.5">
+                          <Input
+                            id="mssv"
+                            value={profile.mssv}
+                            disabled
+                            className="h-12 bg-muted/50 cursor-not-allowed text-base flex-1"
+                          />
+                          <Badge variant="secondary" className="px-4 py-2 text-sm font-semibold">
                             Verified
                           </Badge>
-                  </div>
-                </div>
-              )}
+                        </div>
+                      </div>
+                    )}
 
-              {/* Bio */}
-              <div className="space-y-2">
-                      <Label htmlFor="bio" className="text-sm font-semibold">
+                    {/* Bio */}
+                    <div className="space-y-2.5">
+                      <Label htmlFor="bio" className="text-sm font-semibold flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-muted-foreground" />
                         Bio
                       </Label>
-                <Textarea
-                  id="bio"
-                  value={profile.bio}
-                  onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
-                  placeholder="Tell us about yourself..."
-                  rows={4}
-                        className="resize-none"
-                />
-                      <p className="text-xs text-muted-foreground">
+                      <Textarea
+                        id="bio"
+                        value={profile.bio}
+                        onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
+                        placeholder="Tell us about yourself..."
+                        rows={4}
+                        className="resize-none text-base"
+                      />
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
                         A brief description about yourself (optional)
                       </p>
                     </div>
-              </div>
-
-                  <Separator className="my-6" />
-
-              {/* Save Button */}
-                  <Button 
-                    onClick={handleSaveProfile} 
-                    disabled={savingProfile} 
-                    className="w-full h-11 text-base font-semibold"
-                    size="lg"
-                  >
-                {savingProfile ? (
-                  <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Saving Changes...
-                  </>
-                ) : (
-                  <>
-                        <Save className="h-5 w-5" />
-                    Save Profile
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-            {/* PREFERENCES TAB */}
-            <TabsContent value="preferences" className="space-y-6 mt-0">
-              {/* Appearance Section */}
-              <Card className="shadow-sm border">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      {resolvedTheme === 'dark' ? (
-                        <Moon className="w-5 h-5 text-primary" />
-                      ) : (
-                        <Sun className="w-5 h-5 text-primary" />
-                      )}
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl">Appearance</CardTitle>
-                      <CardDescription className="mt-1">
-                        Customize your theme and visual preferences
-              </CardDescription>
-                    </div>
-                  </div>
-            </CardHeader>
-                <CardContent className="space-y-6">
-              {/* Theme Options */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-semibold">Theme</Label>
-                    <div className="grid grid-cols-3 gap-4">
-                <div
-                        className={`relative flex flex-col items-center gap-3 p-6 rounded-xl border-2 cursor-pointer transition-all hover:scale-105 ${
-                    pendingTheme === 'light'
-                            ? 'border-primary bg-primary/5 shadow-md'
-                            : 'border-border hover:border-muted-foreground/50 bg-background'
-                  }`}
-                  onClick={() => setPendingTheme('light')}
-                >
-                        <div className={`p-3 rounded-lg ${
-                          pendingTheme === 'light' ? 'bg-primary/10' : 'bg-muted'
-                        }`}>
-                  <Sun className={`w-6 h-6 ${pendingTheme === 'light' ? 'text-primary' : 'text-muted-foreground'}`} />
-                        </div>
-                        <span className={`text-sm font-medium ${pendingTheme === 'light' ? 'text-primary' : 'text-foreground'}`}>
-                          Light
-                        </span>
-                        {pendingTheme === 'light' && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                            <div className="w-2 h-2 rounded-full bg-white" />
-                          </div>
-                        )}
-                </div>
-                
-                <div
-                        className={`relative flex flex-col items-center gap-3 p-6 rounded-xl border-2 cursor-pointer transition-all hover:scale-105 ${
-                    pendingTheme === 'dark'
-                            ? 'border-primary bg-primary/5 shadow-md'
-                            : 'border-border hover:border-muted-foreground/50 bg-background'
-                  }`}
-                  onClick={() => setPendingTheme('dark')}
-                >
-                        <div className={`p-3 rounded-lg ${
-                          pendingTheme === 'dark' ? 'bg-primary/10' : 'bg-muted'
-                        }`}>
-                  <Moon className={`w-6 h-6 ${pendingTheme === 'dark' ? 'text-primary' : 'text-muted-foreground'}`} />
-                        </div>
-                        <span className={`text-sm font-medium ${pendingTheme === 'dark' ? 'text-primary' : 'text-foreground'}`}>
-                          Dark
-                        </span>
-                        {pendingTheme === 'dark' && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                            <div className="w-2 h-2 rounded-full bg-white" />
-                          </div>
-                        )}
-                </div>
-                
-                <div
-                        className={`relative flex flex-col items-center gap-3 p-6 rounded-xl border-2 cursor-pointer transition-all hover:scale-105 ${
-                    pendingTheme === 'system'
-                            ? 'border-primary bg-primary/5 shadow-md'
-                            : 'border-border hover:border-muted-foreground/50 bg-background'
-                  }`}
-                  onClick={() => setPendingTheme('system')}
-                >
-                        <div className={`p-3 rounded-lg ${
-                          pendingTheme === 'system' ? 'bg-primary/10' : 'bg-muted'
-                        }`}>
-                  <Monitor className={`w-6 h-6 ${pendingTheme === 'system' ? 'text-primary' : 'text-muted-foreground'}`} />
-                        </div>
-                        <span className={`text-sm font-medium ${pendingTheme === 'system' ? 'text-primary' : 'text-foreground'}`}>
-                          System
-                        </span>
-                        {pendingTheme === 'system' && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                            <div className="w-2 h-2 rounded-full bg-white" />
-                          </div>
-                        )}
-                </div>
-              </div>
-              
-              {pendingTheme === 'system' && (
-                      <div className="mt-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                        <p className="text-sm text-blue-700 dark:text-blue-300">
-                  Theme will automatically change based on your system settings.
-                          Currently using <span className="font-semibold">{resolvedTheme === 'dark' ? 'dark' : 'light'}</span> mode.
-                </p>
-                      </div>
-              )}
-              
-              {hasUnsavedChanges && (
-                      <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                        <p className="text-sm text-amber-700 dark:text-amber-300 flex items-center gap-2">
-                          <span>⚠️</span>
-                          You have unsaved changes. Click "Save Changes" to apply.
-                        </p>
-                      </div>
-                    )}
                   </div>
 
-                  <Separator className="my-6" />
+                  <Separator className="my-4" />
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={handleResetAppearance}
-              disabled={!hasUnsavedChanges}
-                      className="h-11"
-            >
-              Discard Changes
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleResetToDefaults}
-                      className="h-11"
-            >
-              Reset to Defaults
-            </Button>
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <Button 
-                      onClick={handleSavePreferences} 
-                      disabled={saving || !hasUnsavedChanges}
-                      className="h-11 min-w-[140px]"
+                      onClick={handleSaveProfile} 
+                      disabled={savingProfile} 
+                      className="flex-1 sm:flex-none h-12 text-base font-semibold shadow-sm hover:shadow-md transition-shadow"
                       size="lg"
                     >
-                      {saving ? (
+                      {savingProfile ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : saveSuccess ? (
-                        <>
-                          <span>✓</span>
-                          Saved
+                          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                          Saving Changes...
                         </>
                       ) : (
-                        'Save Changes'
+                        'Save Profile'
                       )}
-            </Button>
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleLogout}
+                      className="flex-1 sm:flex-none h-12 text-base font-semibold"
+                      size="lg"
+                    >
+                      Sign Out
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Account Section */}
-              <Card className="shadow-sm border">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <UserCircle className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl">Account Information</CardTitle>
-                      <CardDescription className="mt-1">
-                        View your account details and manage account actions
-                      </CardDescription>
-                    </div>
-                  </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b">
-                  <div>
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Email</Label>
-                        <p className="text-sm font-medium mt-1">{user?.email}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b">
-                <div>
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Username</Label>
-                        <p className="text-sm font-medium mt-1">{user?.username}</p>
-                  </div>
-                </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b">
-                <div>
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Student ID</Label>
-                        <p className="text-sm font-medium mt-1">{user?.mssv || 'Not set'}</p>
-                      </div>
-                    </div>
-
-                    <Separator className="my-4" />
-
-                    <div className="space-y-3 pt-2">
-                  <Button
-                    variant="outline"
-                        className="w-full h-11 justify-start"
-                    onClick={() => router.push('/profile')}
-                  >
-                        <UserIcon className="w-4 h-4 mr-2" />
-                        View Full Profile
-                  </Button>
-
-                  <Button
-                    variant="destructive"
-                        className="w-full h-11 justify-start"
-                    onClick={handleLogout}
-                  >
-                        <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                        className="w-full h-11 justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                  >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Account
-                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
         </div>
       </ScrollArea>
     </PageWrapper>

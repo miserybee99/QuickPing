@@ -38,11 +38,11 @@ export function VoteOptionComponent({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'w-full text-left p-3 rounded-xl border-2 transition-all relative overflow-hidden group',
+        'w-full text-left p-3 rounded-lg border transition-all relative overflow-hidden group',
         isSelected
-          ? 'border-[#615EF0] bg-[#615EF0]/5'
-          : 'border-gray-200 hover:border-gray-300',
-        isWinner && 'border-green-500 bg-green-50',
+          ? 'border-[#615EF0] bg-[#615EF0]/5 dark:bg-[#615EF0]/10'
+          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+        isWinner && 'border-green-500 dark:border-green-400 bg-green-50 dark:bg-green-900/20',
         disabled && 'cursor-default opacity-80'
       )}
     >
@@ -53,12 +53,12 @@ export function VoteOptionComponent({
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
           className={cn(
-            'absolute inset-y-0 left-0 rounded-l-xl',
+            'absolute inset-y-0 left-0 rounded-l-lg',
             isWinner
-              ? 'bg-green-500/20'
+              ? 'bg-green-500/20 dark:bg-green-400/20'
               : isSelected
-              ? 'bg-[#615EF0]/15'
-              : 'bg-gray-200/50'
+              ? 'bg-[#615EF0]/15 dark:bg-[#615EF0]/20'
+              : 'bg-gray-200/50 dark:bg-gray-700/50'
           )}
         />
       )}
@@ -70,7 +70,7 @@ export function VoteOptionComponent({
             'w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors',
             isSelected
               ? 'border-[#615EF0] bg-[#615EF0]'
-              : 'border-gray-300 group-hover:border-gray-400'
+              : 'border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500'
           )}
         >
           {isSelected && <Check className="w-3 h-3 text-white" />}
@@ -79,7 +79,9 @@ export function VoteOptionComponent({
         {/* Option text */}
         <span className={cn(
           'flex-1 text-sm font-medium',
-          isSelected ? 'text-gray-900' : 'text-gray-700'
+          isSelected 
+            ? 'text-gray-900 dark:text-gray-100' 
+            : 'text-gray-700 dark:text-gray-300'
         )}>
           {text}
         </span>
@@ -89,11 +91,15 @@ export function VoteOptionComponent({
           <div className="flex items-center gap-2 text-sm">
             <span className={cn(
               'font-semibold',
-              isWinner ? 'text-green-600' : isSelected ? 'text-[#615EF0]' : 'text-gray-600'
+              isWinner 
+                ? 'text-green-600 dark:text-green-400' 
+                : isSelected 
+                ? 'text-[#615EF0]' 
+                : 'text-gray-600 dark:text-gray-400'
             )}>
               {percentage}%
             </span>
-            <span className="text-gray-400 text-xs">
+            <span className="text-gray-400 dark:text-gray-500 text-xs">
               ({voteCount})
             </span>
           </div>
@@ -102,7 +108,7 @@ export function VoteOptionComponent({
 
       {/* Voters tooltip (non-anonymous) */}
       {showResults && !anonymous && voterNames.length > 0 && (
-        <div className="relative mt-2 flex items-center gap-1.5 text-xs text-gray-500">
+        <div className="relative mt-2 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
           <Users className="w-3 h-3" />
           <span className="truncate">
             {voterNames.slice(0, 3).join(', ')}

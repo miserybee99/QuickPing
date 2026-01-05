@@ -146,66 +146,74 @@ export function VoteMessage({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'w-full max-w-md rounded-2xl border-2 overflow-hidden',
-        isExpired ? 'border-gray-200 bg-gray-50' : 'border-[#615EF0]/20 bg-white'
+        'w-full rounded-lg border overflow-hidden',
+        isExpired 
+          ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50' 
+          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50 hover:border-[#615EF0]/30 dark:hover:border-[#615EF0]/30 transition-colors'
       )}
     >
       {/* Header */}
       <div className={cn(
-        'px-4 py-3 flex items-center gap-3',
-        isExpired ? 'bg-gray-100' : 'bg-[#615EF0]/5'
+        'px-4 py-3 flex items-center gap-3 border-b',
+        isExpired 
+          ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700' 
+          : 'bg-[#615EF0]/5 dark:bg-[#615EF0]/10 border-gray-200 dark:border-gray-700'
       )}>
         <div className={cn(
-          'w-8 h-8 rounded-lg flex items-center justify-center',
-          isExpired ? 'bg-gray-200' : 'bg-[#615EF0]/10'
+          'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+          isExpired 
+            ? 'bg-gray-200 dark:bg-gray-700' 
+            : 'bg-[#615EF0]/10 dark:bg-[#615EF0]/20'
         )}>
           {isExpired ? (
-            <Trophy className="w-4 h-4 text-gray-500" />
+            <Trophy className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           ) : (
             <BarChart3 className="w-4 h-4 text-[#615EF0]" />
           )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <Avatar className="h-5 w-5">
+            <Avatar className="h-6 w-6 rounded-lg">
               <AvatarImage src={creator?.avatar_url} />
-              <AvatarFallback className="text-[10px]">
+              <AvatarFallback className="text-xs bg-gray-200 dark:bg-gray-700 rounded-lg">
                 {creator?.username?.[0]?.toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
-            <span className="text-sm font-medium text-gray-700 truncate">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
               {creator?.username || 'Unknown'}
             </span>
-            <span className="text-xs text-gray-400">created a poll</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">created a poll</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {vote.settings.anonymous && (
-            <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
               <Lock className="w-3 h-3" />
               Anonymous
             </div>
           )}
           {canDelete && onDelete && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setShowDeleteConfirm(true)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              className="h-7 w-7 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
               title="Delete poll"
             >
               <Trash2 className="w-4 h-4" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Question */}
-      <div className="px-4 py-3 border-b border-gray-100">
-        <h3 className="font-semibold text-gray-900">{vote.question}</h3>
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100">{vote.question}</h3>
         {vote.settings.allow_multiple && (
-          <p className="text-xs text-gray-500 mt-1">Multiple choices allowed</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Multiple choices allowed</p>
         )}
       </div>
 
@@ -231,8 +239,8 @@ export function VoteMessage({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-        <div className="flex items-center gap-4 text-sm text-gray-500">
+      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1">
             <Users className="w-4 h-4" />
             {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
@@ -240,7 +248,7 @@ export function VoteMessage({
           {timeLeft && (
             <span className={cn(
               'flex items-center gap-1',
-              isExpired ? 'text-red-500' : 'text-gray-500'
+              isExpired ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
             )}>
               <Clock className="w-4 h-4" />
               {timeLeft}
@@ -251,7 +259,7 @@ export function VoteMessage({
         {hasVoted && !isExpired && (
           <button
             onClick={() => {/* Could implement change vote */}}
-            className="text-xs text-[#615EF0] hover:text-[#5048D9] font-medium flex items-center gap-1"
+            className="text-xs text-[#615EF0] hover:text-[#5048D9] dark:text-[#615EF0] dark:hover:text-[#7C73F0] font-medium flex items-center gap-1 transition-colors"
           >
             <RefreshCw className="w-3 h-3" />
             Change vote
@@ -266,7 +274,7 @@ export function VoteMessage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-white/50 flex items-center justify-center"
+            className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center backdrop-blur-sm"
           >
             <motion.div
               animate={{ rotate: 360 }}
@@ -284,21 +292,21 @@ export function VoteMessage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm"
             onClick={() => setShowDeleteConfirm(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl"
+              className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-gray-200 dark:border-gray-700"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full mx-auto mb-4">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
+              <div className="flex items-center justify-center w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full mx-auto mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
-              <h3 className="text-lg font-bold text-center mb-2">Delete Poll?</h3>
-              <p className="text-sm text-gray-500 text-center mb-6">
+              <h3 className="text-lg font-bold text-center mb-2 text-gray-900 dark:text-gray-100">Delete Poll?</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
                 This will permanently delete the poll and all votes. This action cannot be undone.
               </p>
               <div className="flex gap-3">
@@ -311,7 +319,8 @@ export function VoteMessage({
                   Cancel
                 </Button>
                 <Button
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  variant="destructive"
+                  className="flex-1"
                   onClick={handleDelete}
                   disabled={isDeleting}
                 >

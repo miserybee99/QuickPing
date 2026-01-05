@@ -14,6 +14,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUser } from '@/hooks/useUser';
+import { useFriendRequests } from '@/contexts/FriendRequestsContext';
 
 // Main navigation items
 const mainNavigation = [
@@ -30,9 +31,11 @@ interface NavItemProps {
     icon: LucideIcon;
   };
   isActive: boolean;
+  showBadge?: boolean;
+  badgeCount?: number;
 }
 
-function NavItem({ item, isActive }: NavItemProps) {
+function NavItem({ item, isActive, showBadge = false, badgeCount = 0 }: NavItemProps) {
   const Icon = item.icon;
   
   return (
@@ -47,6 +50,13 @@ function NavItem({ item, isActive }: NavItemProps) {
       title={item.name}
     >
       <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+      
+      {/* Notification badge */}
+      {showBadge && badgeCount > 0 && (
+        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-sidebar-bg">
+          {badgeCount > 99 ? '99+' : badgeCount}
+        </span>
+      )}
       
       {/* Active indicator */}
       {isActive && (
@@ -64,6 +74,7 @@ function NavItem({ item, isActive }: NavItemProps) {
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useUser();
+  const { pendingCount } = useFriendRequests();
 
   // Don't show sidebar on login/register pages
   if (pathname === '/login' || pathname === '/register') {
@@ -97,6 +108,8 @@ export function Sidebar() {
               key={item.name} 
               item={item} 
               isActive={isActive(item.href)}
+              showBadge={item.name === 'Friends'}
+              badgeCount={item.name === 'Friends' ? pendingCount : 0}
             />
           ))}
         </nav>

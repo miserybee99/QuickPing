@@ -109,8 +109,8 @@ export default function GroupsPage() {
 
       <PageContainer maxWidth="2xl">
         {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-xl">
+        <div className="mb-6 w-full">
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search groups..."

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Send, Paperclip, Check, Smile, MessageCircle, Vote, ChevronDown, ChevronUp } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import vi from 'date-fns/locale/vi';
@@ -1398,7 +1399,16 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
     }
 
     if (errors.length > 0) {
-      alert(errors.join('\n'));
+      // Show toast notification for file validation errors
+      const errorMessage = errors.length === 1 
+        ? errors[0] 
+        : `${errors.length} files were rejected:\n${errors.join('\n')}`;
+      
+      toast({
+        title: "File Upload Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
 
     setSelectedFiles((prev) => [...prev, ...newFiles]);
@@ -1462,7 +1472,16 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
     }
 
     if (errors.length > 0) {
-      alert(errors.join('\n'));
+      // Show toast notification for file validation errors
+      const errorMessage = errors.length === 1 
+        ? errors[0] 
+        : `${errors.length} files were rejected:\n${errors.join('\n')}`;
+      
+      toast({
+        title: "File Upload Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
 
     setSelectedFiles((prev) => [...prev, ...newFiles]);
@@ -1631,7 +1650,12 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       const errorMessage = error?.response?.data?.error || 
                           error?.message || 
                           'Failed to send message';
-      alert(`❌ ${errorMessage}. Please try again.`);
+      
+      toast({
+        title: "Send Failed",
+        description: `${errorMessage}. Please try again.`,
+        variant: "destructive"
+      });
     } finally {
       setSending(false);
     }
@@ -1787,17 +1811,17 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
   const conversationName = getConversationName();
 
   return (
-    <div className="flex flex-col bg-white h-screen overflow-hidden">
+    <div className="flex flex-col bg-white dark:bg-gray-900 h-screen overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 flex flex-col z-10">
         {/* Connection status banner */}
         {!isConnected && (
-          <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-sm text-yellow-800 text-center">
+          <div className="bg-yellow-50 dark:bg-yellow-900/30 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2 text-sm text-yellow-800 dark:text-yellow-200 text-center">
             <span className="font-medium">⚠️ Reconnecting...</span> Messages may be delayed
           </div>
         )}
         
-        <div className="h-20 flex items-center justify-between px-6">
+        <div className="h-20 flex items-center justify-between px-6 bg-white dark:bg-gray-900">
           <div className="flex items-center gap-4 flex-1">
             <Avatar className="h-10 w-10 rounded-[10px]">
               <AvatarImage src={
@@ -1805,12 +1829,12 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                   ? getFileUrl(otherParticipant?.avatar_url)
                   : conversation.avatar_url ? getFileUrl(conversation.avatar_url) : undefined
               } />
-              <AvatarFallback className="rounded-[10px] bg-gray-200">
+              <AvatarFallback className="rounded-[10px] bg-gray-200 dark:bg-gray-700">
                 {conversationName[0]?.toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h3 className="font-semibold text-[20px] leading-[25px]">{conversationName}</h3>
+              <h3 className="font-semibold text-[20px] leading-[25px] text-gray-900 dark:text-gray-100">{conversationName}</h3>
               {conversation.type === 'direct' && otherParticipant && (
                 <div className="flex items-center gap-2 mt-0.5">
                   <StatusDot 
@@ -1818,7 +1842,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                     size="sm"
                     showOffline={true}
                   />
-                  <span className="text-[12px] font-semibold text-gray-900 opacity-60">
+                  <span className="text-[12px] font-semibold text-gray-900 dark:text-gray-300 opacity-60">
                     {(isUserOnline(otherParticipant._id) || otherParticipant.is_online) 
                       ? 'Online' 
                       : formatLastSeen(otherParticipant.last_seen)
@@ -1829,13 +1853,13 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
             </div>
             {conversation.type === 'direct' && otherParticipant && (
               friendshipStatus === 'accepted' ? (
-                <div className="h-10 px-4 bg-green-500/10 text-green-600 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 min-w-[130px]">
+                <div className="h-10 px-4 bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 min-w-[130px]">
                   <Check className="w-4 h-4" />
                   Friend
                 </div>
               ) : friendshipStatus === 'pending' ? (
-                <div className="h-10 px-4 bg-amber-500/10 text-amber-600 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 min-w-[130px]">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-amber-600">
+                <div className="h-10 px-4 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 min-w-[130px]">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-amber-600 dark:text-amber-400">
                     <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4"/>
                   </svg>
                   Pending
@@ -1880,17 +1904,17 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
             {/* AI Summarize Button */}
             <button 
               onClick={() => setShowAISummaryModal(true)}
-              className="h-10 flex items-center gap-2 px-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg hover:from-purple-500/20 hover:to-pink-500/20 transition-all group min-w-[130px] justify-center"
+              className="h-10 flex items-center gap-2 px-4 bg-gradient-to-r from-purple-500/10 dark:from-purple-500/20 to-pink-500/10 dark:to-pink-500/20 rounded-lg hover:from-purple-500/20 dark:hover:from-purple-500/30 hover:to-pink-500/20 dark:hover:to-pink-500/30 transition-all group min-w-[130px] justify-center"
               title="AI Summary"
             >
-              <Sparkles className="w-5 h-5 text-purple-500 group-hover:text-purple-600" strokeWidth={1.5} />
-              <span className="text-[14px] font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <Sparkles className="w-5 h-5 text-purple-500 dark:text-purple-400 group-hover:text-purple-600 dark:group-hover:text-purple-300" strokeWidth={1.5} />
+              <span className="text-[14px] font-semibold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
                 AI Summary
               </span>
             </button>
           </div>
         </div>
-        <div className="h-px bg-black opacity-[0.08]" />
+        <div className="h-px bg-black dark:bg-white opacity-[0.08] dark:opacity-[0.1]" />
       </div>
       
       {/* Pinned Messages Section */}
@@ -1907,24 +1931,24 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       
       {/* Active Votes Section - Group chats only */}
       {isGroupChat && votes.size > 0 && (
-        <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50">
+        <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
           <button
             onClick={() => setIsVotesCollapsed(!isVotesCollapsed)}
-            className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
+            className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
           >
-            <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
               <Vote className="w-4 h-4 text-[#615EF0]" />
               Active Votes ({Array.from(votes.values()).filter(v => v.is_active).length})
             </h4>
             {isVotesCollapsed ? (
-              <ChevronDown className="w-4 h-4 text-gray-500" />
+              <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             ) : (
-              <ChevronUp className="w-4 h-4 text-gray-500" />
+              <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             )}
           </button>
           
           {!isVotesCollapsed && (
-            <div className="px-6 pb-4 space-y-4 max-h-[300px] overflow-y-auto">
+            <div className="px-6 pb-4 space-y-3 max-h-[300px] overflow-y-auto">
               {Array.from(votes.values())
                 .filter(v => v.is_active)
                 .map(vote => (
@@ -1947,7 +1971,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       <div 
         ref={messagesContainerRef} 
         className={cn(
-          "flex-1 px-6 py-6 bg-white relative",
+          "flex-1 px-6 py-6 bg-white dark:bg-gray-900 relative",
           isDragOver && "ring-2 ring-[#615EF0] ring-inset"
         )}
         style={{ minHeight: 0, overflowY: 'auto' }}
@@ -1957,17 +1981,17 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       >
         {/* Drag overlay */}
         {isDragOver && (
-          <div className="absolute inset-0 bg-[#615EF0]/10 flex items-center justify-center z-50 pointer-events-none">
-            <div className="bg-white rounded-xl shadow-lg px-8 py-6 text-center">
+          <div className="absolute inset-0 bg-[#615EF0]/10 dark:bg-[#615EF0]/20 flex items-center justify-center z-50 pointer-events-none">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg px-8 py-6 text-center border border-gray-200 dark:border-gray-700">
               <Paperclip className="w-12 h-12 text-[#615EF0] mx-auto mb-2" />
-              <p className="text-lg font-medium text-gray-900">Drop files to upload</p>
-              <p className="text-sm text-gray-500">Max {MAX_FILES} files, each &lt; 5MB</p>
+              <p className="text-lg font-medium text-gray-900 dark:text-gray-100">Drop files to upload</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Max {MAX_FILES} files, each &lt; 5MB</p>
             </div>
           </div>
         )}
         <div className="space-y-8">
           {messages.length === 0 ? (
-            <div className="text-center text-gray-500 mt-8">
+            <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
               No messages yet. Start a conversation!
             </div>
           ) : (
@@ -1988,7 +2012,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
               return (
                 <div key={uniqueKey}>
                   {showDate && (
-                    <div className="text-center text-xs text-gray-500 my-4">
+                    <div className="text-center text-xs text-gray-500 dark:text-gray-400 my-4">
                       {format(new Date(msg.created_at), 'dd/MM/yyyy', { locale: vi })}
                     </div>
                   )}
@@ -2002,7 +2026,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                     {!isOwn && !sameSenderBefore && (
                       <Avatar className="h-10 w-10 flex-shrink-0 rounded-[8.33px]">
                         <AvatarImage src={getFileUrl(msg.sender_id?.avatar_url)} />
-                        <AvatarFallback className="rounded-[8.33px] bg-gray-200">
+                        <AvatarFallback className="rounded-[8.33px] bg-gray-200 dark:bg-gray-700">
                           {msg.sender_id?.username?.[0]?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
@@ -2057,7 +2081,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                                       'px-4 py-2 rounded-xl max-w-md transition-colors duration-500',
                                       isOwn
                                         ? 'bg-[#615EF0] text-white'
-                                        : 'bg-[#F1F1F1] text-gray-900'
+                                        : 'bg-[#F1F1F1] dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                                     )}
                                   >
                                     {msg.reply_to && (
@@ -2074,7 +2098,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                                         {msg.is_edited && (
                                           <span className={cn(
                                             'text-[10px] ml-1 italic',
-                                            isOwn ? 'text-white/70' : 'text-gray-500'
+                                            isOwn ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'
                                           )}>
                                             (edited)
                                           </span>
@@ -2104,7 +2128,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                                   'px-4 py-2 rounded-xl max-w-md transition-colors duration-500',
                                   isOwn
                                     ? 'bg-[#615EF0] text-white'
-                                    : 'bg-[#F1F1F1] text-gray-900'
+                                    : 'bg-[#F1F1F1] dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                                 )}
                               >
                                 {/* Quoted message (reply_to) */}
@@ -2123,7 +2147,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                                     {msg.is_edited && (
                                       <span className={cn(
                                         'text-[10px] ml-1 italic',
-                                        isOwn ? 'text-white/70' : 'text-gray-500'
+                                        isOwn ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'
                                       )}>
                                         (edited)
                                       </span>
@@ -2185,7 +2209,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                                 'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-colors',
                                 isOwn
                                   ? 'bg-[#615EF0]/10 text-[#615EF0] hover:bg-[#615EF0]/20'
-                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                               )}
                             >
                               <MessageCircle className="h-3 w-3" />
@@ -2202,7 +2226,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                             const currentUserId = currentUser?._id?.toString();
                             if (!conversation || !msg.read_by || msg.read_by.length === 0) {
                               // Message sent but not read by anyone
-                              return <Check className="w-3.5 h-3.5 text-gray-400" />;
+                              return <Check className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />;
                             }
 
                             // For direct chat: check if other person read it
@@ -2236,7 +2260,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                               );
                             }
 
-                            return <Check className="w-3.5 h-3.5 text-gray-400" />;
+                            return <Check className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />;
                           })()}
                         </div>
                       )}
@@ -2251,7 +2275,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
           
           {/* Typing indicator */}
           {typingUsers.size > 0 && (
-            <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-500 italic">
+            <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 italic">
               <div className="flex gap-1">
                 <span className="animate-bounce" style={{ animationDelay: '0ms' }}>●</span>
                 <span className="animate-bounce" style={{ animationDelay: '150ms' }}>●</span>
@@ -2291,7 +2315,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
       </AnimatePresence>
 
       {/* Input */}
-      <div className="flex-shrink-0 flex items-center gap-6 px-6 py-6 bg-white border-t border-gray-200 z-10">
+      <div className="flex-shrink-0 flex items-center gap-3 px-6 py-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-10">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -2302,26 +2326,30 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
           className="hidden"
         />
         
-        <button 
-          type="button" 
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => fileInputRef.current?.click()}
-          className="flex-shrink-0 text-gray-600 hover:text-gray-900 transition-colors"
           disabled={sending}
+          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
         >
-          <Paperclip className="w-6 h-6" strokeWidth={1.5} />
-        </button>
+          <Paperclip className="w-5 h-5" />
+        </Button>
         
         {/* Vote button - only for group chats */}
         {isGroupChat && (
-          <button 
-            type="button" 
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setShowCreateVoteModal(true)}
-            className="flex-shrink-0 text-gray-600 hover:text-[#615EF0] transition-colors"
             disabled={sending}
             title="Create a vote"
+            className="text-gray-600 dark:text-gray-400 hover:text-[#615EF0] dark:hover:text-[#615EF0]"
           >
-            <Vote className="w-6 h-6" strokeWidth={1.5} />
-          </button>
+            <Vote className="w-5 h-5" />
+          </Button>
         )}
         
         <form 
@@ -2333,7 +2361,7 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
               handleSendMessage(e);
             }
           }} 
-          className="flex-1 flex items-center gap-[10px] px-5 py-2.5 bg-white border-2 border-[#E2E8F0] rounded-xl relative"
+          className="flex-1 flex items-center gap-2 px-4 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg"
         >
           <input
             ref={inputRef}
@@ -2364,24 +2392,28 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
                 markMessagesAsRead();
               }, 300); // 300ms debounce
             }}
-            className="flex-1 bg-transparent border-none outline-none text-[14px] leading-[21px] text-gray-900 placeholder:text-gray-900 placeholder:opacity-40"
+            className="flex-1 h-full bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
             disabled={sending}
           />
           
           {/* Emoji picker button */}
           <div className="relative">
-            <button
+            <Button
               ref={emojiButtonRef}
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className={cn(
-                'flex-shrink-0 transition-colors',
-                showEmojiPicker ? 'text-[#615EF0]' : 'text-gray-400 hover:text-gray-600'
-              )}
               disabled={sending}
+              className={cn(
+                'h-8 w-8',
+                showEmojiPicker 
+                  ? 'text-[#615EF0] dark:text-[#615EF0]' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              )}
             >
-              <Smile className="w-5 h-5" strokeWidth={1.5} />
-            </button>
+              <Smile className="w-5 h-5" />
+            </Button>
             
             {/* Emoji picker popup */}
             <EmojiPicker
@@ -2393,16 +2425,20 @@ export function ChatPanel({ conversationId, onConversationLoaded }: ChatPanelPro
             />
           </div>
           
-          <button
+          <Button
             type="submit"
+            variant="ghost"
+            size="icon"
             disabled={(!message.trim() && selectedFiles.length === 0) || sending}
             className={cn(
-              "flex-shrink-0 transition-colors",
-              (message.trim() || selectedFiles.length > 0) ? "text-[#615EF0] hover:text-[#615EF0]/80" : "text-gray-400"
+              "h-8 w-8",
+              (message.trim() || selectedFiles.length > 0) 
+                ? "text-[#615EF0] dark:text-[#615EF0] hover:text-[#615EF0]/80 dark:hover:text-[#615EF0]/80" 
+                : "text-gray-400 dark:text-gray-500"
             )}
           >
-            <Send className="w-5 h-5" strokeWidth={1.5} />
-          </button>
+            <Send className="w-5 h-5" />
+          </Button>
         </form>
       </div>
       
